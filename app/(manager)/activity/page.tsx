@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
+import { cn } from "@/lib/utils";
 import { ClipboardList, Paperclip, X, Plus, User, Clock } from "lucide-react";
 
 type UploadedFile = { url: string; name: string; type: string };
@@ -190,25 +191,30 @@ export default function ActivityPage() {
                     ))}
                   </div>
                 )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
+                {/*
+                  Use a <label> around a visually hidden file input, not a separate Button + hidden input
+                  with display:none — browsers often block .click() on non-visible file inputs (Safari, iOS, etc.).
+                */}
+                <label
+                  className={cn(
+                    "inline-flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700 bg-transparent px-3 text-xs font-medium text-zinc-100 transition-colors",
+                    "hover:border-zinc-600 hover:bg-zinc-800",
+                    "focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 focus-within:ring-offset-zinc-950",
+                    uploading && "pointer-events-none cursor-not-allowed opacity-50"
+                  )}
                 >
-                  <Paperclip className="h-4 w-4" />
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                    className="sr-only"
+                  />
+                  <Paperclip className="h-4 w-4 shrink-0" />
                   {uploading ? "Uploading…" : "Attach Files"}
-                </Button>
+                </label>
                 <p className="text-xs text-zinc-500">Max 10 MB · PDF, images, Word, Excel</p>
               </div>
 

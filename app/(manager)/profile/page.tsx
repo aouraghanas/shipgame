@@ -70,14 +70,20 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar name={session.user.name} avatarUrl={session.user.avatarUrl} size="xl" />
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="absolute bottom-0 right-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-600 border-2 border-zinc-950 hover:bg-indigo-500 transition-colors"
+              <label
+                aria-label="Change profile photo"
+                className={`absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-zinc-950 bg-indigo-600 transition-colors hover:bg-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-400 focus-within:ring-offset-2 focus-within:ring-offset-zinc-950 ${uploading ? "pointer-events-none opacity-50" : ""}`}
               >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={uploadAvatar}
+                  disabled={uploading}
+                />
                 <Camera className="h-4 w-4 text-white" />
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
+              </label>
             </div>
             {uploading && <p className="text-sm text-zinc-400">Uploading...</p>}
             <div className="text-center">
