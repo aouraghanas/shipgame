@@ -57,6 +57,7 @@ export default function ActivityPage() {
   const [category, setCategory] = useState("OTHER");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -70,15 +71,22 @@ export default function ActivityPage() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    setFileUploadError("");
     setUploading(true);
     const results: UploadedFile[] = [];
     for (const file of files) {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload-activity", { method: "POST", body: fd });
-      if (res.ok) results.push(await res.json());
+      if (res.ok) {
+        results.push(await res.json());
+      } else {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setFileUploadError(j.error ?? "Upload failed. Try a smaller file or a different format.");
+        break;
+      }
     }
-    setUploadedFiles((prev) => [...prev, ...results]);
+    if (results.length) setUploadedFiles((prev) => [...prev, ...results]);
     setUploading(false);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -192,14 +200,13 @@ export default function ActivityPage() {
                   </div>
                 )}
                 {/*
-                  Use a <label> around a visually hidden file input, not a separate Button + hidden input
-                  with display:none — browsers often block .click() on non-visible file inputs (Safari, iOS, etc.).
+                  Full-size opacity-0 input stacked above a decorative row so the native click
+                  always hits a real, sized file input (not sr-only/clip) — required on many mobile
+                  WebKit builds and more reliable than label+sr-only or .click() on display:none.
                 */}
-                <label
+                <div
                   className={cn(
-                    "inline-flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700 bg-transparent px-3 text-xs font-medium text-zinc-100 transition-colors",
-                    "hover:border-zinc-600 hover:bg-zinc-800",
-                    "focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 focus-within:ring-offset-zinc-950",
+                    "group relative min-h-10 w-full",
                     uploading && "pointer-events-none cursor-not-allowed opacity-50"
                   )}
                 >
@@ -207,14 +214,25 @@ export default function ActivityPage() {
                     ref={fileRef}
                     type="file"
                     multiple
-                    accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx"
+                    accept="image/*,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     onChange={handleFileChange}
                     disabled={uploading}
-                    className="sr-only"
+                    className="absolute inset-0 z-10 h-full min-h-10 w-full cursor-pointer border-0 p-0 opacity-0 file:h-full file:w-full"
+                    aria-label="Attach files to this activity"
                   />
-                  <Paperclip className="h-4 w-4 shrink-0" />
-                  {uploading ? "Uploading…" : "Attach Files"}
-                </label>
+                  <div
+                    className="pointer-events-none flex min-h-10 w-full select-none items-center justify-center gap-2 rounded-md border border-zinc-700 bg-transparent px-3 text-xs font-medium text-zinc-100 transition-colors group-focus-within:border-zinc-600 group-focus-within:bg-zinc-800 group-focus-within:ring-2 group-focus-within:ring-indigo-500 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-950"
+                    aria-hidden
+                  >
+                    <Paperclip className="h-4 w-4 shrink-0" />
+                    <span>{uploading ? "Uploading…" : "Attach Files"}</span>
+                  </div>
+                </div>
+                {fileUploadError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    {fileUploadError}
+                  </p>
+                )}
                 <p className="text-xs text-zinc-500">Max 10 MB · PDF, images, Word, Excel</p>
               </div>
 
