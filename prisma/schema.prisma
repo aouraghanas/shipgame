@@ -1,0 +1,196 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SCREEN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum ActivityCategory {
+  CALL
+  EMAIL
+  MEETING
+  ISSUE_FIX
+  FOLLOW_UP
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(MANAGER)
+  status       Status   @default(ACTIVE)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deliveredEntries   DeliveredEntry[]
+  stockEntries       StockEntry[]
+  notes              Note[]
+  managerActivities  ManagerActivity[]
+}
+
+// Delivered orders: one record per user per month (replace on update)
+model DeliveredEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  monthKey  String   // YYYY-MM
+  total     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+}
+
+// Stock orders: additive entries per user per month
+model StockEntry {
+  id         String   @id @default(cuid())
+  userId     String
+  monthKey   String   // YYYY-MM
+  quantity   Int
+  sellerName String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Notes: at most one active visible note per user per month
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  monthKey  String   // YYYY-MM
+  content   String
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+}
+
+// Audit log: tracks every mutation made by users
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String
+  action    String   // e.g. "stock.create", "profile.update", "avatar.upload"
+  details   String   // human-readable description of what changed
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+// Shared seller list across all account managers
+model Seller {
+  id         String   @id @default(cuid())
+  name       String
+  email      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  activities ManagerActivity[]
+
+  @@index([name])
+}
+
+// Account manager activity log entries
+model ManagerActivity {
+  id          String           @id @default(cuid())
+  managerId   String
+  sellerId    String
+  description String
+  category    ActivityCategory @default(OTHER)
+  attachments String[]         @default([])
+  createdAt   DateTime         @default(now())
+
+  manager User   @relation(fields: [managerId], references: [id])
+  seller  Seller @relation(fields: [sellerId], references: [id])
+
+  @@index([managerId])
+  @@index([sellerId])
+  @@index([createdAt])
+}
+
+// Notification bar management
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  DANGER
+  PROMO
+}
+
+enum NotificationFrequency {
+  ALWAYS
+  ONCE_PER_SESSION
+  UNTIL_DISMISSED
+}
+
+model Notification {
+  id            String                @id @default(cuid())
+  title         String
+  content       String
+  type          NotificationType      @default(INFO)
+  bgColor       String?
+  textColor     String?
+  icon          String?
+  ctaText       String?
+  ctaUrl        String?
+  ctaNewTab     Boolean               @default(true)
+  isActive      Boolean               @default(false)
+  isDraft       Boolean               @default(true)
+  isDismissible Boolean               @default(true)
+  frequency     NotificationFrequency @default(ALWAYS)
+  targetRoles   String[]              @default([])
+  displayPages  String[]              @default(["leaderboard"])
+  priority      Int                   @default(0)
+  startAt       DateTime?
+  endAt         DateTime?
+  createdBy     String
+  dismissCount  Int                   @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  dismissals    NotificationDismissal[]
+}
+
+model NotificationDismissal {
+  id             String       @id @default(cuid())
+  notificationId String
+  userId         String
+  createdAt      DateTime     @default(now())
+
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+}
+
+// Monthly reward and punishment configuration
+model MonthConfig {
+  id             String   @id @default(cuid())
+  monthKey       String   @unique // YYYY-MM
+  rewardText     String?
+  punishmentText String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

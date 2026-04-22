@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node_modules/.bin/next build:*)",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''Valid JSON, build script:'', p.scripts.build\\)\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(node_modules/.bin/next --version)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[''''version'''']\\)\")",
+      "Bash(node /Users/anastrong/Desktop/Shipgame/node_modules/next/dist/bin/next build)",
+      "Bash(node -e \"const {execSync} = require\\(''child_process''\\); console.log\\(execSync\\(''node_modules/.bin/next build'', {encoding:''utf8'', stdio:''pipe''}\\)\\);\")",
+      "Bash(node -e \"console.log\\(require\\(''./node_modules/next/package.json''\\).version\\)\")",
+      "Bash(node_modules/.bin/next info:*)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"NETLIFY=$NETLIFY\")",
+      "Bash(echo \"NETLIFY_BUILD_BASE=$NETLIFY_BUILD_BASE\")",
+      "Bash(printenv)",
+      "Read(//Users/anastrong/Desktop/Shipgame/**)",
+      "Bash(npm uninstall:*)",
+      "Bash(node -e \"const lr = require\\(''./node_modules/lucide-react''\\); console.log\\(''Trophy:'', typeof lr.Trophy\\); console.log\\(''Crown:'', typeof lr.Crown\\); console.log\\(''Medal:'', typeof lr.Medal\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(grep -l \"useContext\\\\|useState\\\\|useRef\\\\|useEffect\" node_modules/@radix-ui/react-slot/dist/*.js)",
+      "Bash(npx netlify:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls \"/Users/anastrong/Desktop/Shipgame/app/\\(admin\\)/admin/\")",
+      "Bash(npx prisma:*)",
+      "Bash(npx next:*)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(chmod +x \"/Users/anastrong/Desktop/Shipgame/node_modules/.bin/napi-postinstall\")",
+      "Bash(netlify status *)",
+      "Bash(sudo npm *)",
+      "Bash(wait)",
+      "Bash(kill %1)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/anastrong/Desktop/Shipgame/package.json','utf8'\\)\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/anastrong/Desktop/Shipgame/package-lock.json','utf8'\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(pkill -f \"node.*next\")",
+      "Bash(pkill -f \"npm run\")",
+      "Bash(brctl download *)",
+      "Bash(xxd \"/Users/anastrong/Desktop/Shipgame/app/\\(admin\\)/admin/page.tsx\")"
+    ]
+  }
+}
