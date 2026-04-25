@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, Trophy, Activity, User, Users, Gift,
-  BarChart2, Bell, TrendingUp, LogOut, Ship,
+  BarChart2, Bell, TrendingUp, LogOut, Ship, MessageSquareMore,
 } from "lucide-react";
 
 const ADMIN_LINKS = [
@@ -15,6 +15,7 @@ const ADMIN_LINKS = [
   { href: "/admin/activity", icon: Activity, label: "Activity" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports" },
   { href: "/admin/performance", icon: TrendingUp, label: "Performance" },
+  { href: "/admin/feedback", icon: MessageSquareMore, label: "Feedback" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
 ];
@@ -23,6 +24,7 @@ const MANAGER_LINKS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/activity", icon: Activity, label: "Activity" },
+  { href: "/feedback", icon: MessageSquareMore, label: "Feedback" },
   { href: "/profile", icon: User, label: "Profile" },
 ];
 

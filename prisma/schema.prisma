@@ -29,6 +29,28 @@ enum ActivityCategory {
   OTHER
 }
 
+enum FeedbackTopic {
+  FEATURE_REQUEST
+  BUG_REPORT
+  UX_IMPROVEMENT
+  PRICING
+  INTEGRATION
+  SUPPORT
+  OTHER
+}
+
+enum FeedbackSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum FeedbackReportPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -44,6 +66,8 @@ model User {
   stockEntries       StockEntry[]
   notes              Note[]
   managerActivities  ManagerActivity[]
+  sellerFeedbacks    SellerFeedback[]
+  feedbackReports    FeedbackReport[] @relation("FeedbackReportCreator")
 }
 
 // Delivered orders: one record per user per month (replace on update)
@@ -109,6 +133,7 @@ model Seller {
   updatedAt  DateTime @updatedAt
 
   activities ManagerActivity[]
+  feedbacks  SellerFeedback[]
 
   @@index([name])
 }
@@ -129,6 +154,46 @@ model ManagerActivity {
   @@index([managerId])
   @@index([sellerId])
   @@index([createdAt])
+}
+
+model SellerFeedback {
+  id              String            @id @default(cuid())
+  managerId       String
+  sellerId        String
+  topic           FeedbackTopic     @default(OTHER)
+  sentiment       FeedbackSentiment @default(NEUTRAL)
+  title           String?
+  details         String
+  suggestedAction String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  manager User   @relation(fields: [managerId], references: [id])
+  seller  Seller @relation(fields: [sellerId], references: [id])
+
+  @@index([managerId])
+  @@index([sellerId])
+  @@index([createdAt])
+  @@index([topic])
+}
+
+model FeedbackReport {
+  id            String               @id @default(cuid())
+  period        FeedbackReportPeriod
+  fromDate      DateTime
+  toDate        DateTime
+  generatedAt   DateTime             @default(now())
+  totalNotes    Int                  @default(0)
+  repeatedItems Json?
+  summary       String
+  recommendations String
+  model         String?
+  createdBy     String
+
+  creator User @relation("FeedbackReportCreator", fields: [createdBy], references: [id])
+
+  @@index([period, fromDate, toDate])
+  @@index([generatedAt])
 }
 
 // Notification bar management
