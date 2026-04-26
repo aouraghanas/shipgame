@@ -60,7 +60,7 @@ export function resolveOpenAIApiKey(): ResolvedOpenAIKey {
   return { ok: true, key };
 }
 
-function trimIdEnv(raw: string | undefined): string | null {
+export function trimIdEnv(raw: string | undefined): string | null {
   if (!raw) return null;
   const v = raw
     .replace(/\u200b/g, "")
@@ -75,13 +75,9 @@ function trimIdEnv(raw: string | undefined): string | null {
   return unquote.length ? unquote : null;
 }
 
-/**
- * Headers for https://api.openai.com — includes optional org/project (needed for some multi-org
- * or project-scoped keys; see https://platform.openai.com/docs/api-reference/authentication ).
- */
-export function getOpenAIRequestHeaders(apiKey: string): Record<string, string> {
+/** Authorization + optional org/project (no Content-Type). Use for GET probes. */
+export function getOpenAIAuthHeaders(apiKey: string): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     Authorization: `Bearer ${apiKey}`,
   };
   const org = trimIdEnv(process.env.OPENAI_ORG_ID);
@@ -89,6 +85,17 @@ export function getOpenAIRequestHeaders(apiKey: string): Record<string, string> 
   if (org) headers["OpenAI-Organization"] = org;
   if (project) headers["OpenAI-Project"] = project;
   return headers;
+}
+
+/**
+ * Headers for https://api.openai.com JSON POST — includes optional org/project (needed for some
+ * multi-org or project-scoped keys; see https://platform.openai.com/docs/api-reference/authentication ).
+ */
+export function getOpenAIRequestHeaders(apiKey: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    ...getOpenAIAuthHeaders(apiKey),
+  };
 }
 
 /** Extra guidance when the API still returns 401 (e.g. invalid_issuer). */
@@ -106,4 +113,31 @@ export function augmentOpenAI401Body(bodyText: string): string {
     "the project’s General settings) and optional OPENAI_ORG_ID=org_… if you belong to multiple orgs, then redeploy. " +
     "(3) Ensure the key in Netlify has no line breaks or extra characters."
   );
+}
+
+/** Mask a long secret for admin diagnostics (never log raw keys). */
+export function maskOpenAISecret(value: string | null, maxHead = 10, maxTail = 4): string | null {
+  if (!value) return null;
+  if (value.length <= maxHead + maxTail + 3) return `${value.length} chars`;
+  return `${value.slice(0, maxHead)}…${value.slice(-maxTail)} (${value.length} chars)`;
+}
+
+/** Safe snapshot of what the server will use for OpenAI requests. */
+export function openAIEnvDiagnostics() {
+  const raw = process.env.OPENAI_API_KEY;
+  const key = normalizeOpenAIApiKey(raw);
+  const org = trimIdEnv(process.env.OPENAI_ORG_ID);
+  const project = trimIdEnv(process.env.OPENAI_PROJECT_ID);
+  return {
+    hasRawOpenAIApiKey: Boolean(raw && raw.trim()),
+    keyMasked: key ? maskOpenAISecret(key) : null,
+    keyLength: key?.length ?? 0,
+    keyStartsWithSkProj: key?.startsWith("sk-proj-") ?? false,
+    keyStartsWithSkDash: key?.startsWith("sk-") ?? false,
+    jwtLike: key ? looksLikeJwtNotApiKey(key) : false,
+    openaiOrgIdMasked: org ? maskOpenAISecret(org, 6, 4) : null,
+    openaiProjectIdMasked: project ? maskOpenAISecret(project, 6, 4) : null,
+    sendsOpenAIOrganizationHeader: Boolean(org),
+    sendsOpenAIProjectHeader: Boolean(project),
+  };
 }

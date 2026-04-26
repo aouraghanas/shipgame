@@ -94,6 +94,8 @@ export default function ReportsPage() {
   const [automation, setAutomation] = useState<AutomationRow | null>(null);
   const [aiGenMsg, setAiGenMsg] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [openAiHealthLoading, setOpenAiHealthLoading] = useState(false);
+  const [openAiHealthText, setOpenAiHealthText] = useState("");
 
   const [aiPeriod, setAiPeriod] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("WEEKLY");
   const [aiAnchor, setAiAnchor] = useState(getToday);
@@ -150,6 +152,20 @@ export default function ReportsPage() {
       body: JSON.stringify(patch),
     });
     if (res.ok) setAutomation(await res.json());
+  }
+
+  async function runOpenAiHealth() {
+    setOpenAiHealthLoading(true);
+    setOpenAiHealthText("");
+    try {
+      const res = await fetch("/api/admin/openai-health");
+      const j = (await res.json()) as unknown;
+      setOpenAiHealthText(JSON.stringify(j, null, 2));
+    } catch (e) {
+      setOpenAiHealthText(String(e));
+    } finally {
+      setOpenAiHealthLoading(false);
+    }
   }
 
   async function generateAiReports() {
@@ -280,6 +296,26 @@ export default function ReportsPage() {
               (<span className="font-mono">org_…</span>).
               Optional: <span className="font-mono">ACTIVITY_AI_AUTO_MAX_SELLERS</span> (default 15) caps per-seller reports per run.
             </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                disabled={openAiHealthLoading}
+                onClick={() => void runOpenAiHealth()}
+              >
+                {openAiHealthLoading ? "Testing OpenAI…" : "Test OpenAI from server"}
+              </Button>
+              <span className="text-[11px] text-zinc-500">
+                Admin-only; shows masked env + two API probes (with and without org/project headers).
+              </span>
+            </div>
+            {openAiHealthText ? (
+              <pre className="max-h-64 overflow-auto rounded-md border border-zinc-800 bg-zinc-950 p-2 text-[11px] text-zinc-300 whitespace-pre-wrap">
+                {openAiHealthText}
+              </pre>
+            ) : null}
             {automation?.lastAutoRunAt && (
               <p className="text-xs text-zinc-500">Last auto run: {new Date(automation.lastAutoRunAt).toLocaleString()}</p>
             )}
