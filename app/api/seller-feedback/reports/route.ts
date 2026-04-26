@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import type { FeedbackReportPeriod } from "@prisma/client";
 import { getReportRange } from "@/lib/report-period";
+import { augmentOpenAI401Body, getOpenAIRequestHeaders, resolveOpenAIApiKey } from "@/lib/openai-key";
 
 const PERIOD_VALUES = ["DAILY", "WEEKLY", "MONTHLY"] as const;
 
@@ -38,16 +39,15 @@ async function generateSummaryWithAI(input: {
     manager: { name: string };
   }>;
 }) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const keyRes = resolveOpenAIApiKey();
+  if (!keyRes.ok) {
     return {
-      summary:
-        "OPENAI_API_KEY is not configured. AI summary generation is disabled. You can still review manual notes in this report.",
-      recommendations:
-        "Set OPENAI_API_KEY in production and local environment, then generate the report again for AI insights.",
+      summary: keyRes.summary,
+      recommendations: keyRes.recommendations,
       model: null as string | null,
     };
   }
+  const apiKey = keyRes.key;
 
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
   const lines = input.notes.slice(0, 500).map((n) => ({
@@ -93,9 +93,11 @@ async function generateSummaryWithAI(input: {
 
   if (!response.ok) {
     const err = await response.text().catch(() => "unknown error");
+    const details =
+      response.status === 401 ? augmentOpenAI401Body(err) : err.slice(0, 1200);
     return {
       summary: `AI generation failed: ${response.status}.`,
-      recommendations: `OpenAI API error details: ${err.slice(0, 500)}`,
+      recommendations: `OpenAI API error details: ${details}`,
       model,
     };
   }

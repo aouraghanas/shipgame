@@ -1,4 +1,9 @@
 import type { FeedbackReportPeriod } from "@prisma/client";
+import {
+  augmentOpenAI401Body,
+  getOpenAIRequestHeaders,
+  resolveOpenAIApiKey,
+} from "@/lib/openai-key";
 
 type ActivityRow = {
   createdAt: Date;
@@ -22,17 +27,16 @@ export async function analyzeActivitiesWithAI(input: {
   insights: unknown;
   model: string | null;
 }> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const keyRes = resolveOpenAIApiKey();
+  if (!keyRes.ok) {
     return {
-      summary:
-        "OPENAI_API_KEY is not configured. Configure it to enable AI summaries for activity reports.",
-      recommendations:
-        "Add OPENAI_API_KEY to your environment (Netlify + local), then regenerate this report.",
+      summary: keyRes.summary,
+      recommendations: keyRes.recommendations,
       insights: { themes: [] },
       model: null,
     };
   }
+  const apiKey = keyRes.key;
 
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
   const lines = input.activities.slice(0, 600).map((a) => ({
@@ -89,9 +93,11 @@ export async function analyzeActivitiesWithAI(input: {
 
   if (!response.ok) {
     const err = await response.text().catch(() => "unknown error");
+    const recommendations =
+      response.status === 401 ? augmentOpenAI401Body(err) : err.slice(0, 1200);
     return {
       summary: `AI generation failed: HTTP ${response.status}.`,
-      recommendations: err.slice(0, 800),
+      recommendations,
       insights: { error: true },
       model,
     };

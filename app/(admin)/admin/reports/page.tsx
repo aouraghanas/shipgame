@@ -275,6 +275,9 @@ export default function ReportsPage() {
               Cron URL (GET): <span className="font-mono text-zinc-400">/api/cron/activity-reports</span> with header{" "}
               <span className="font-mono text-zinc-400">Authorization: Bearer $CRON_SECRET</span>.
               Set <span className="font-mono">CRON_SECRET</span> and <span className="font-mono">OPENAI_API_KEY</span> in Netlify.
+              If you use a project-scoped key and get 401s, also set <span className="font-mono">OPENAI_PROJECT_ID</span>{" "}
+              (<span className="font-mono">proj_…</span>) and optionally <span className="font-mono">OPENAI_ORG_ID</span>{" "}
+              (<span className="font-mono">org_…</span>).
               Optional: <span className="font-mono">ACTIVITY_AI_AUTO_MAX_SELLERS</span> (default 15) caps per-seller reports per run.
             </p>
             {automation?.lastAutoRunAt && (
