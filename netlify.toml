@@ -1,6 +1,9 @@
 [build]
-  command = "find . -not -path './node_modules/*' -not -path './.next/*' -type f | xargs -P8 -I{} sh -c 'cat \"{}\" > /dev/null 2>&1 || true' && npm run build"
+  command = "npm run build"
   publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
