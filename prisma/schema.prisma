@@ -51,6 +51,16 @@ enum FeedbackReportPeriod {
   MONTHLY
 }
 
+enum ActivityReportScope {
+  GLOBAL
+  SELLER
+}
+
+enum ActivityReportTrigger {
+  MANUAL
+  SCHEDULED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -68,6 +78,7 @@ model User {
   managerActivities  ManagerActivity[]
   sellerFeedbacks    SellerFeedback[]
   feedbackReports    FeedbackReport[] @relation("FeedbackReportCreator")
+  activityReports    ActivityReport[]   @relation("ActivityReportCreator")
 }
 
 // Delivered orders: one record per user per month (replace on update)
@@ -132,8 +143,9 @@ model Seller {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  activities ManagerActivity[]
-  feedbacks  SellerFeedback[]
+  activities     ManagerActivity[]
+  feedbacks      SellerFeedback[]
+  activityReports ActivityReport[]
 
   @@index([name])
 }
@@ -194,6 +206,40 @@ model FeedbackReport {
 
   @@index([period, fromDate, toDate])
   @@index([generatedAt])
+}
+
+model ActivityReport {
+  id                String                 @id @default(cuid())
+  period            FeedbackReportPeriod
+  scope             ActivityReportScope
+  sellerId          String?
+  fromDate          DateTime
+  toDate            DateTime
+  generatedAt       DateTime               @default(now())
+  totalActivities   Int                    @default(0)
+  categoryBreakdown Json?
+  managerBreakdown  Json?
+  insights          Json?
+  summary           String
+  recommendations   String
+  trigger           ActivityReportTrigger  @default(MANUAL)
+  model             String?
+  createdBy         String?
+
+  creator User?   @relation("ActivityReportCreator", fields: [createdBy], references: [id])
+  seller  Seller? @relation(fields: [sellerId], references: [id])
+
+  @@index([period, fromDate, toDate])
+  @@index([scope, sellerId])
+  @@index([generatedAt])
+}
+
+model ActivityReportAutomation {
+  id            String               @id @default("singleton")
+  autoEnabled   Boolean              @default(false)
+  autoPeriod    FeedbackReportPeriod @default(DAILY)
+  lastAutoRunAt DateTime?
+  updatedAt     DateTime             @updatedAt
 }
 
 // Notification bar management

@@ -5,37 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import type { FeedbackReportPeriod } from "@prisma/client";
+import { getReportRange } from "@/lib/report-period";
 
 const PERIOD_VALUES = ["DAILY", "WEEKLY", "MONTHLY"] as const;
-
-function startOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
-
-function getRange(period: FeedbackReportPeriod, anchor: Date) {
-  const now = new Date(anchor);
-  if (period === "DAILY") return { from: startOfDay(now), to: endOfDay(now) };
-  if (period === "WEEKLY") {
-    const day = now.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
-    const from = new Date(now);
-    from.setDate(now.getDate() + mondayOffset);
-    const to = new Date(from);
-    to.setDate(from.getDate() + 6);
-    return { from: startOfDay(from), to: endOfDay(to) };
-  }
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { from: startOfDay(from), to: endOfDay(to) };
-}
 
 function topRepeated(notes: { details: string; seller: { name: string } }[]) {
   const keyCounts = new Map<string, number>();
@@ -204,7 +176,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const anchor = parsed.data.anchorDate ? new Date(parsed.data.anchorDate) : new Date();
-  const { from, to } = getRange(parsed.data.period, anchor);
+  const { from, to } = getReportRange(parsed.data.period, anchor);
 
   const notes = await prisma.sellerFeedback.findMany({
     where: {
