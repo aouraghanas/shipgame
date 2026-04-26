@@ -6,7 +6,12 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import type { FeedbackReportPeriod } from "@prisma/client";
 import { getReportRange } from "@/lib/report-period";
-import { augmentOpenAI401Body, getOpenAIRequestHeaders, resolveOpenAIApiKey } from "@/lib/openai-key";
+import {
+  augmentOpenAI401Body,
+  getOpenAIRequestHeaders,
+  resolveOpenAIApiKey,
+  trimIdEnv,
+} from "@/lib/openai-key";
 
 const PERIOD_VALUES = ["DAILY", "WEEKLY", "MONTHLY"] as const;
 
@@ -74,22 +79,47 @@ async function generateSummaryWithAI(input: {
     JSON.stringify(lines),
   ].join("\n");
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are a strict JSON generator." },
-        { role: "user", content: prompt },
-      ],
-    }),
+  const url = "https://api.openai.com/v1/chat/completions";
+  const bodyStr = JSON.stringify({
+    model,
+    temperature: 0.2,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: "You are a strict JSON generator." },
+      { role: "user", content: prompt },
+    ],
   });
+
+  let response = await fetch(url, {
+    method: "POST",
+    headers: getOpenAIRequestHeaders(apiKey),
+    body: bodyStr,
+  });
+
+  const scopedHeaders =
+    Boolean(trimIdEnv(process.env.OPENAI_ORG_ID) || trimIdEnv(process.env.OPENAI_PROJECT_ID));
+
+  if (!response.ok && response.status === 401 && scopedHeaders) {
+    const firstErr = await response.text().catch(() => "unknown error");
+    const retry = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: bodyStr,
+    });
+    if (retry.ok) {
+      response = retry;
+    } else {
+      const secondErr = await retry.text().catch(() => "unknown error");
+      return {
+        summary: `AI generation failed: ${response.status}.`,
+        recommendations: `OpenAI API error details: ${augmentOpenAI401Body(firstErr)}\n\nRetry without org/project headers (HTTP ${retry.status}): ${secondErr.slice(0, 600)}`,
+        model,
+      };
+    }
+  }
 
   if (!response.ok) {
     const err = await response.text().catch(() => "unknown error");

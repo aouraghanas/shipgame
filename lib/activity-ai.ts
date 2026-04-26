@@ -3,6 +3,7 @@ import {
   augmentOpenAI401Body,
   getOpenAIRequestHeaders,
   resolveOpenAIApiKey,
+  trimIdEnv,
 } from "@/lib/openai-key";
 
 type ActivityRow = {
@@ -74,22 +75,50 @@ export async function analyzeActivitiesWithAI(input: {
     JSON.stringify(lines),
   ].join("\n");
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are a strict JSON generator." },
-        { role: "user", content: prompt },
-      ],
-    }),
+  const url = "https://api.openai.com/v1/chat/completions";
+  const bodyStr = JSON.stringify({
+    model,
+    temperature: 0.2,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: "You are a strict JSON generator." },
+      { role: "user", content: prompt },
+    ],
   });
+
+  let response = await fetch(url, {
+    method: "POST",
+    headers: getOpenAIRequestHeaders(apiKey),
+    body: bodyStr,
+  });
+
+  const scopedHeaders =
+    Boolean(trimIdEnv(process.env.OPENAI_ORG_ID) || trimIdEnv(process.env.OPENAI_PROJECT_ID));
+
+  if (!response.ok && response.status === 401 && scopedHeaders) {
+    const firstErr = await response.text().catch(() => "unknown error");
+    const retry = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: bodyStr,
+    });
+    if (retry.ok) {
+      response = retry;
+    } else {
+      const secondErr = await retry.text().catch(() => "unknown error");
+      return {
+        summary: "AI generation failed: HTTP 401.",
+        recommendations:
+          augmentOpenAI401Body(firstErr) +
+          `\n\nRetry without OpenAI-Organization / OpenAI-Project headers failed (HTTP ${retry.status}): ${secondErr.slice(0, 600)}`,
+        insights: { error: true },
+        model,
+      };
+    }
+  }
 
   if (!response.ok) {
     const err = await response.text().catch(() => "unknown error");
