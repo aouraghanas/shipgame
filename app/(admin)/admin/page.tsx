@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
     { href: "/admin/rewards", icon: Gift, label: "Rewards", desc: "Set monthly reward & punishment" },
     { href: "/admin/activity", icon: Activity, label: "Activity", desc: "View manager activity logs" },
     { href: "/admin/reports", icon: BarChart2, label: "Reports", desc: "Delivered & stock reports" },
-    { href: "/admin/feedback", icon: MessageSquareMore, label: "Feedback Intel", desc: "Seller notes + AI summaries" },
+    { href: "/admin/feedback", icon: MessageSquareMore, label: "Recommendations", desc: "Seller recommendations + AI summaries" },
     { href: "/leaderboard", icon: Trophy, label: "Leaderboard", desc: "View the live leaderboard" },
     { href: "/admin/notifications", icon: Bell, label: "Notifications", desc: "Manage announcement bars" },
   ];

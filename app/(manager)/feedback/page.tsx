@@ -120,7 +120,7 @@ export default function FeedbackPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white flex items-center gap-3">
           <MessageSquarePlus className="h-8 w-8 text-indigo-400" />
-          Seller Feedback Notes
+          Seller Recommendations
         </h1>
         <p className="text-zinc-400 mt-1">
           Capture seller suggestions, requests, concerns, and product ideas.
@@ -135,7 +135,7 @@ export default function FeedbackPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-indigo-400" />
-              Add Feedback Note
+              Add Recommendation
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -186,7 +186,7 @@ export default function FeedbackPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Feedback details *</Label>
+                <Label>Recommendation details *</Label>
                 <Textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
@@ -207,7 +207,7 @@ export default function FeedbackPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={submitting || !seller || !details.trim()}>
-                {submitting ? "Saving..." : "Save Feedback Note"}
+                {submitting ? "Saving..." : "Save Recommendation"}
               </Button>
             </form>
           </CardContent>
@@ -226,7 +226,7 @@ export default function FeedbackPage() {
           ) : entries.length === 0 ? (
             <Card>
               <CardContent className="py-16 text-center text-sm text-zinc-500">
-                No feedback notes yet. Add your first note using the form.
+                No recommendations yet. Add your first note using the form.
               </CardContent>
             </Card>
           ) : (

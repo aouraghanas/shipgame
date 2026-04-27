@@ -15,7 +15,7 @@ const ADMIN_LINKS = [
   { href: "/admin/activity", icon: Activity, label: "Activity" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports" },
   { href: "/admin/performance", icon: TrendingUp, label: "Performance" },
-  { href: "/admin/feedback", icon: MessageSquareMore, label: "Feedback" },
+  { href: "/admin/feedback", icon: MessageSquareMore, label: "Recommendations" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
 ];
@@ -24,7 +24,7 @@ const MANAGER_LINKS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/activity", icon: Activity, label: "Activity" },
-  { href: "/feedback", icon: MessageSquareMore, label: "Feedback" },
+  { href: "/feedback", icon: MessageSquareMore, label: "Recommendations" },
   { href: "/profile", icon: User, label: "Profile" },
 ];
 
