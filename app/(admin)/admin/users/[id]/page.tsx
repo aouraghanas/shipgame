@@ -80,6 +80,7 @@ export default function EditUserPage() {
                     <SelectItem value="MANAGER">Manager</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SCREEN">Screen</SelectItem>
+                    <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

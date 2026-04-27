@@ -1,0 +1,23 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { canAccessAccounting } from "@/lib/accounting-access";
+import { buildAccountingSummary } from "@/lib/accounting-summary";
+
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || !canAccessAccounting(session))
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const from = req.nextUrl.searchParams.get("from");
+  const to = req.nextUrl.searchParams.get("to");
+  if (!from || !to) return NextResponse.json({ error: "from and to (YYYY-MM-DD) required" }, { status: 400 });
+
+  const fromD = new Date(from);
+  const toD = new Date(to + "T23:59:59.999Z");
+  if (Number.isNaN(fromD.getTime()) || Number.isNaN(toD.getTime()))
+    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
+
+  const summary = await buildAccountingSummary(fromD, toD);
+  return NextResponse.json(summary);
+}

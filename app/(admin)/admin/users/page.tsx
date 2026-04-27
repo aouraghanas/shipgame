@@ -22,6 +22,7 @@ export default function UsersPage() {
   const roleVariant = (role: string) => {
     if (role === "ADMIN") return "gold" as const;
     if (role === "SCREEN") return "silver" as const;
+    if (role === "ACCOUNTANT") return "outline" as const;
     return "secondary" as const;
   };
 

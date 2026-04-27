@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/shared/Navbar";
 import { NotificationBar } from "@/components/shared/NotificationBar";
 
-export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
+export default async function AccountantLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  if (session.user.role === "ACCOUNTANT") redirect("/accounting");
-  // Admins can also access manager pages (leaderboard view)
-  if (session.user.role === "SCREEN") redirect("/screen");
+
+  const role = session.user.role;
+  if (role !== "ACCOUNTANT" && role !== "ADMIN") redirect("/");
 
   return (
     <div className="min-h-screen bg-zinc-950">

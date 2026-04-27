@@ -13,6 +13,7 @@ enum Role {
   ADMIN
   MANAGER
   SCREEN
+  ACCOUNTANT
 }
 
 enum Status {
@@ -79,6 +80,113 @@ model User {
   sellerFeedbacks    SellerFeedback[]
   feedbackReports    FeedbackReport[] @relation("FeedbackReportCreator")
   activityReports    ActivityReport[]   @relation("ActivityReportCreator")
+  accountingLedgerEntries AccountingLedgerEntry[] @relation("LedgerCreator")
+  accountingAiReports     AccountingAiReport[]     @relation("AccountingAiCreator")
+}
+
+// ——— Shipeh accounting (manual entry MVP; API sync later) ———
+
+enum AccountingDirection {
+  EXPENSE
+  REVENUE
+}
+
+enum AccountingCurrency {
+  LYD
+  USD
+  MAD
+}
+
+enum AccountingCategory {
+  OFFICE_RENT
+  OFFICE_OTHER
+  SALARY_MOROCCO_DH
+  SALARY_LIBYA_LYD
+  STOCK_COD_DROP_PURCHASE
+  ONLINE_INFRA
+  TRANSFER_LIBYA_TO_USD_FEE
+  OTHER_LOSS
+  SHIPPING_MARGIN
+  FULFILLMENT_MARGIN
+  CALL_CENTER_INTERNAL
+  CALL_CENTER_DEXPRESS
+  LEAD_ENTRY_FEE
+  COD_SERVICE_FEE_ON_COLLECTION
+  OTHER_REVENUE
+}
+
+/// Global fee knobs (COD %, lead $, transfer % band). Edited by admins.
+model AccountingSettings {
+  id                    String   @id @default("singleton")
+  codFeePercent         Decimal  @default(2) @db.Decimal(6, 3)
+  leadFeeUsd            Decimal  @default(0.2) @db.Decimal(10, 4)
+  transferFeePercentMin Decimal @default(0.1) @db.Decimal(6, 3)
+  transferFeePercentMax Decimal @default(2) @db.Decimal(6, 3)
+  updatedAt             DateTime @updatedAt
+}
+
+/// Per-city delivery: what Dexpress charges us vs what we sell to the seller (LYD).
+model AccountingCityRate {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  dexpressCostLyd  Decimal  @db.Decimal(14, 3)
+  sellToSellerLyd  Decimal  @db.Decimal(14, 3)
+  active           Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+/// Official LYD per 1 USD for a calendar day (Libya street / treasury rate you track).
+model AccountingExchangeRate {
+  id        String   @id @default(cuid())
+  dateKey   String   @unique // YYYY-MM-DD
+  lydPerUsd Decimal  @db.Decimal(16, 6)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([dateKey])
+}
+
+model AccountingLedgerEntry {
+  id              String              @id @default(cuid())
+  direction       AccountingDirection
+  category        AccountingCategory
+  amount          Decimal             @db.Decimal(18, 4)
+  currency        AccountingCurrency
+  amountUsdApprox Decimal?            @db.Decimal(18, 4)
+  occurredAt      DateTime
+  description     String
+  metadata        Json?
+  createdById     String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  createdBy User @relation("LedgerCreator", fields: [createdById], references: [id])
+
+  @@index([occurredAt])
+  @@index([category])
+  @@index([direction, currency])
+}
+
+model AccountingAiReport {
+  id                String   @id @default(cuid())
+  fromDate          DateTime
+  toDate            DateTime
+  generatedAt       DateTime @default(now())
+  summary           String
+  recommendations   String
+  insights          Json?
+  model             String?
+  createdBy         String
+
+  creator User @relation("AccountingAiCreator", fields: [createdBy], references: [id])
+
+  @@index([fromDate, toDate])
+  @@index([generatedAt])
 }
 
 // Delivered orders: one record per user per month (replace on update)

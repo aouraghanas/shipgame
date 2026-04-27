@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, Trophy, Activity, User, Users, Gift,
-  BarChart2, Bell, TrendingUp, LogOut, Ship, MessageSquareMore,
+  BarChart2, Bell, TrendingUp, LogOut, Ship, MessageSquareMore, Landmark,
 } from "lucide-react";
 
 const ADMIN_LINKS = [
@@ -14,11 +14,14 @@ const ADMIN_LINKS = [
   { href: "/admin/rewards", icon: Gift, label: "Rewards" },
   { href: "/admin/activity", icon: Activity, label: "Activity" },
   { href: "/admin/reports", icon: BarChart2, label: "Reports" },
+  { href: "/accounting", icon: Landmark, label: "Accounting" },
   { href: "/admin/performance", icon: TrendingUp, label: "Performance" },
   { href: "/admin/feedback", icon: MessageSquareMore, label: "Recommendations" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
 ];
+
+const ACCOUNTANT_LINKS = [{ href: "/accounting", icon: Landmark, label: "Accounting" }];
 
 const MANAGER_LINKS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -37,7 +40,10 @@ export function Navbar() {
   return (
     <nav className="border-b border-zinc-800 bg-zinc-950">
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-6 h-14">
-        <Link href={role === "ADMIN" ? "/admin" : "/dashboard"} className="flex items-center gap-2 mr-2">
+        <Link
+          href={role === "ADMIN" ? "/admin" : role === "ACCOUNTANT" ? "/accounting" : "/dashboard"}
+          className="flex items-center gap-2 mr-2"
+        >
           <Ship className="h-5 w-5 text-indigo-400" />
           <span className="font-bold text-white text-sm">Shipeh</span>
         </Link>

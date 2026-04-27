@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Gift, Activity, BarChart2, Trophy, Bell, MessageSquareMore } from "lucide-react";
+import { Users, Gift, Activity, BarChart2, Trophy, Bell, MessageSquareMore, Landmark } from "lucide-react";
 
 interface Stats {
   totalUsers: number;
@@ -32,6 +32,7 @@ export default function AdminDashboardPage() {
     { href: "/admin/rewards", icon: Gift, label: "Rewards", desc: "Set monthly reward & punishment" },
     { href: "/admin/activity", icon: Activity, label: "Activity", desc: "View manager activity logs" },
     { href: "/admin/reports", icon: BarChart2, label: "Reports", desc: "Delivered & stock reports" },
+    { href: "/accounting", icon: Landmark, label: "Accounting", desc: "Ledger, fees, FX & AI period review" },
     { href: "/admin/feedback", icon: MessageSquareMore, label: "Recommendations", desc: "Seller recommendations + AI summaries" },
     { href: "/leaderboard", icon: Trophy, label: "Leaderboard", desc: "View the live leaderboard" },
     { href: "/admin/notifications", icon: Bell, label: "Notifications", desc: "Manage announcement bars" },

@@ -321,7 +321,7 @@ export function NotificationForm({ initialData, mode, notificationId }: Notifica
               >
                 All Users
               </button>
-              {["ADMIN", "MANAGER", "SCREEN"].map((r) => (
+              {["ADMIN", "MANAGER", "SCREEN", "ACCOUNTANT"].map((r) => (
                 <button key={r} type="button" onClick={() => toggleArr("targetRoles", r)} className={checkBtn(form.targetRoles.includes(r))}>
                   {r}
                 </button>
