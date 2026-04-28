@@ -23,6 +23,7 @@ export default function UsersPage() {
     if (role === "ADMIN") return "gold" as const;
     if (role === "SCREEN") return "silver" as const;
     if (role === "ACCOUNTANT") return "outline" as const;
+    if (role === "SOURCING_AGENT") return "default" as const;
     return "secondary" as const;
   };
 

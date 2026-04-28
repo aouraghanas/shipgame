@@ -14,6 +14,7 @@ enum Role {
   MANAGER
   SCREEN
   ACCOUNTANT
+  SOURCING_AGENT
 }
 
 enum Status {
@@ -82,6 +83,10 @@ model User {
   activityReports    ActivityReport[]   @relation("ActivityReportCreator")
   accountingLedgerEntries AccountingLedgerEntry[] @relation("LedgerCreator")
   accountingAiReports     AccountingAiReport[]     @relation("AccountingAiCreator")
+  ticketsCreated          SupportTicket[]          @relation("TicketCreator")
+  ticketsAssigned         SupportTicket[]          @relation("TicketAssignee")
+  ticketAttachments       SupportTicketAttachment[] @relation("TicketAttachmentUploader")
+  ticketComments          SupportTicketComment[]   @relation("TicketCommentAuthor")
 }
 
 // ——— Shipeh accounting (manual entry MVP; API sync later) ———
@@ -254,6 +259,7 @@ model Seller {
   activities     ManagerActivity[]
   feedbacks      SellerFeedback[]
   activityReports ActivityReport[]
+  supportTickets SupportTicket[]
 
   @@index([name])
 }
@@ -412,4 +418,105 @@ model MonthConfig {
   punishmentText String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// ——— Support tickets (managers + admins create; sourcing team + admins handle) ———
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  ARCHIVED
+}
+
+enum SupportTicketSubject {
+  SOURCING
+  PAYMENTS
+  CALL_CENTER
+  DELIVERY
+  SHIPPING
+  ORDERS
+  PLATFORM
+  WAREHOUSE
+  PARTNER_LOGISTICS
+  FINANCE
+  PRODUCT_CATALOG
+  TECH_SUPPORT
+  ACCOUNTING
+  OTHER
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportTicketRecipient {
+  ALL_ADMINS
+  SPECIFIC_USER
+  SOURCING_TEAM
+}
+
+model SupportTicket {
+  id             String                 @id @default(cuid())
+  createdById    String
+  sellerId       String?
+  sellerNameText String?
+  subject        SupportTicketSubject
+  priority       SupportTicketPriority    @default(NORMAL)
+  deadlineAt     DateTime?
+  title          String
+  description    String                   @db.Text
+  recipient      SupportTicketRecipient
+  assigneeId     String?
+  status         SupportTicketStatus      @default(OPEN)
+  archivedAt     DateTime?
+  resolvedAt     DateTime?
+  resolutionNote String?                  @db.Text
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  createdBy   User                        @relation("TicketCreator", fields: [createdById], references: [id])
+  assignee    User?                       @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  seller      Seller?                     @relation(fields: [sellerId], references: [id])
+  attachments SupportTicketAttachment[]
+  comments    SupportTicketComment[]
+
+  @@index([status, createdAt])
+  @@index([assigneeId])
+  @@index([createdById])
+  @@index([recipient, status])
+  @@index([sellerId])
+}
+
+model SupportTicketAttachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  url          String
+  fileName     String
+  mimeType     String
+  size         Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy User          @relation("TicketAttachmentUploader", fields: [uploadedById], references: [id])
+
+  @@index([ticketId])
+}
+
+model SupportTicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User          @relation("TicketCommentAuthor", fields: [userId], references: [id])
+
+  @@index([ticketId])
 }

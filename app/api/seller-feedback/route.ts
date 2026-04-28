@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role === "SCREEN") {
+  if (!session || session.user.role === "SCREEN" || session.user.role === "SOURCING_AGENT") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

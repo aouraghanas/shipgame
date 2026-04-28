@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Gift, Activity, BarChart2, Trophy, Bell, MessageSquareMore, Landmark } from "lucide-react";
+import { Users, Gift, Activity, BarChart2, Trophy, Bell, MessageSquareMore, Landmark, Ticket } from "lucide-react";
 
 interface Stats {
   totalUsers: number;
@@ -28,6 +28,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   const sections = [
+    { href: "/tickets", icon: Ticket, label: "Tickets", desc: "Internal support queue & sourcing pool" },
     { href: "/admin/users", icon: Users, label: "Users", desc: "Manage accounts and roles" },
     { href: "/admin/rewards", icon: Gift, label: "Rewards", desc: "Set monthly reward & punishment" },
     { href: "/admin/activity", icon: Activity, label: "Activity", desc: "View manager activity logs" },

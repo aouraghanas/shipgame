@@ -18,7 +18,8 @@ const SCOPE_VALUES = ["GLOBAL", "SELLER"] as const;
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  const r = session?.user?.role;
+  if (!session || (r !== "ADMIN" && r !== "SOURCING_AGENT")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

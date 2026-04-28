@@ -95,6 +95,7 @@ export default function NewUserPage() {
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="SCREEN">Screen</SelectItem>
                   <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                  <SelectItem value="SOURCING_AGENT">Sourcing agent</SelectItem>
                 </SelectContent>
               </Select>
             </div>

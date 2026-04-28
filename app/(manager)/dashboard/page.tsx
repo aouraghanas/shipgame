@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentMonthKey, formatMonthKey } from "@/lib/utils";
 import { stockEntryPoints } from "@/lib/scoring";
-import { Plus, Trash2, TrendingUp, Package, Trophy } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Package, Trophy, Ticket } from "lucide-react";
 
 type StockEntry = { id: string; quantity: number; sellerName: string | null; createdAt: string };
 
@@ -81,6 +82,19 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
         <p className="text-zinc-400 mt-1">{formatMonthKey(monthKey)}</p>
       </div>
+
+      <Link href="/tickets" className="group block mb-6">
+        <div className="rounded-xl border border-indigo-500/40 bg-indigo-950/30 px-4 py-4 flex items-center gap-4 transition-colors hover:border-indigo-400/70 hover:bg-indigo-950/45">
+          <div className="p-3 rounded-lg bg-indigo-600/30">
+            <Ticket className="h-6 w-6 text-indigo-300 shrink-0" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-white">Support tickets</p>
+            <p className="text-sm text-zinc-400">Open sourcing, logistics, payments, and platform tickets</p>
+          </div>
+          <span className="text-indigo-400 text-sm shrink-0 ml-auto group-hover:text-indigo-300">Go →</span>
+        </div>
+      </Link>
 
       {/* Score summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
