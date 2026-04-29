@@ -34,6 +34,7 @@ export type LeaderboardData = {
   loserPlaces: number;
   rewardTexts: [string | null, string | null, string | null];
   punishmentTexts: [string | null, string | null];
+  leaderboardDesign: "CLASSIC" | "ARENA";
   scoring: MonthlyScoringDTO;
 };
 

@@ -17,6 +17,7 @@ import { getCurrentMonthKey, formatMonthKey } from "@/lib/utils";
 import { Trophy, AlertTriangle, Calculator } from "lucide-react";
 
 type FormState = {
+  leaderboardDesign: "CLASSIC" | "ARENA";
   winnerPlaces: number;
   loserPlaces: number;
   rewardText1: string;
@@ -33,6 +34,7 @@ type FormState = {
 };
 
 const defaultForm = (): FormState => ({
+  leaderboardDesign: "CLASSIC",
   winnerPlaces: 3,
   loserPlaces: 1,
   rewardText1: "",
@@ -67,6 +69,7 @@ export default function RewardsPage() {
                 : d.deliveredDivisor)
             : "100";
         setForm({
+          leaderboardDesign: d.leaderboardDesign ?? "CLASSIC",
           winnerPlaces: d.winnerPlaces ?? 3,
           loserPlaces: d.loserPlaces ?? 1,
           rewardText1: d.rewardText1 ?? d.rewardText ?? "",
@@ -95,6 +98,7 @@ export default function RewardsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         monthKey,
+        leaderboardDesign: form.leaderboardDesign,
         winnerPlaces: form.winnerPlaces,
         loserPlaces: form.loserPlaces,
         rewardText1: form.rewardText1.trim() || null,
@@ -138,6 +142,29 @@ export default function RewardsPage() {
         </div>
       ) : (
         <form onSubmit={handleSave} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Leaderboard design version</CardTitle>
+              <CardDescription>
+                Keep the classic design or switch to the competitive office mode with stronger winner/loser visibility.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-w-sm">
+              <Select
+                value={form.leaderboardDesign}
+                onValueChange={(v: "CLASSIC" | "ARENA") => setForm((f) => ({ ...f, leaderboardDesign: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CLASSIC">Classic leaderboard</SelectItem>
+                  <SelectItem value="ARENA">Competitive office mode</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-amber-400">

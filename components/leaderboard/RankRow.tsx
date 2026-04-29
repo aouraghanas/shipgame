@@ -3,16 +3,16 @@ import type { LeaderboardEntry } from "@/types";
 
 interface Props {
   entry: LeaderboardEntry;
-  isLast: boolean;
   punishmentText: string | null;
 }
 
-export function RankRow({ entry, isLast, punishmentText }: Props) {
+export function RankRow({ entry, punishmentText }: Props) {
+  const isDanger = Boolean(punishmentText);
   return (
     <div
       className={`flex items-center gap-4 rounded-xl px-4 py-3 transition-colors ${
-        isLast
-          ? "border border-red-800/50 bg-red-950/30"
+        isDanger
+          ? "border border-red-700/70 bg-red-950/45 shadow-[0_0_0_1px_rgba(185,28,28,0.25)]"
           : "border border-zinc-800/60 bg-zinc-900/50 hover:bg-zinc-800/50"
       }`}
     >
@@ -30,8 +30,8 @@ export function RankRow({ entry, isLast, punishmentText }: Props) {
         {entry.note && (
           <p className="text-xs text-indigo-300 italic truncate">&quot;{entry.note}&quot;</p>
         )}
-        {isLast && punishmentText && (
-          <p className="text-xs text-red-400 font-medium">{punishmentText}</p>
+        {punishmentText && (
+          <p className="text-xs text-red-300 font-semibold uppercase tracking-wide">{punishmentText}</p>
         )}
       </div>
 

@@ -11,7 +11,7 @@ export default function LeaderboardPage() {
           <p className="text-zinc-400 mt-0.5">Current month rankings</p>
         </div>
       </div>
-      <LeaderboardView />
+      <LeaderboardView autoRefresh refreshInterval={15000} />
     </div>
   );
 }

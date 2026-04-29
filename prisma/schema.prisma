@@ -441,6 +441,7 @@ model MonthConfig {
   stockPointsLow    Int @default(1)
   stockPointsMid    Int @default(2)
   stockPointsHigh   Int @default(3)
+  leaderboardDesign String @default("CLASSIC")
 }
 
 // ——— Support tickets (managers + admins create; sourcing team + admins handle) ———

@@ -25,6 +25,7 @@ const schema = z
     stockPointsLow: z.coerce.number().int().min(0).optional(),
     stockPointsMid: z.coerce.number().int().min(0).optional(),
     stockPointsHigh: z.coerce.number().int().min(0).optional(),
+    leaderboardDesign: z.enum(["CLASSIC", "ARENA"]).optional(),
   })
   .refine(
     (d) =>
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
       stockPointsLow: d.stockPointsLow ?? 1,
       stockPointsMid: d.stockPointsMid ?? 2,
       stockPointsHigh: d.stockPointsHigh ?? 3,
+      leaderboardDesign: d.leaderboardDesign ?? "CLASSIC",
     },
     update: {
       ...(d.rewardText !== undefined && { rewardText: d.rewardText }),
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest) {
       ...(d.stockPointsLow !== undefined && { stockPointsLow: d.stockPointsLow }),
       ...(d.stockPointsMid !== undefined && { stockPointsMid: d.stockPointsMid }),
       ...(d.stockPointsHigh !== undefined && { stockPointsHigh: d.stockPointsHigh }),
+      ...(d.leaderboardDesign !== undefined && { leaderboardDesign: d.leaderboardDesign }),
     },
   });
 

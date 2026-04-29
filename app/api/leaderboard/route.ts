@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
     loserPlaces,
     rewardTexts,
     punishmentTexts,
+    leaderboardDesign: config?.leaderboardDesign ?? "CLASSIC",
     scoring: {
       deliveredDivisor: scoringCfg.deliveredDivisor,
       stockBoundaryMid: scoringCfg.stockBoundaryMid,

@@ -55,6 +55,26 @@ body {
   animation: fade-in 0.25s ease-out;
 }
 
+@keyframes rank-up {
+  0% { transform: translateY(0); box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  30% { transform: translateY(-4px); box-shadow: 0 0 24px rgba(16, 185, 129, 0.35); }
+  100% { transform: translateY(0); box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes rank-down {
+  0% { transform: translateY(0); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  30% { transform: translateY(2px); box-shadow: 0 0 22px rgba(239, 68, 68, 0.35); }
+  100% { transform: translateY(0); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.animate-rank-up {
+  animation: rank-up 850ms ease-out;
+}
+
+.animate-rank-down {
+  animation: rank-down 850ms ease-out;
+}
+
 /* Rich text content inside notification bars */
 .notification-content p { display: inline; }
 .notification-content strong { font-weight: 700; }
