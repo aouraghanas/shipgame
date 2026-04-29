@@ -1,8 +1,8 @@
-/** Row chrome by priority — light tints on dark UI so urgency reads clearly without heavy blocks. */
+/** Row chrome by priority — light tints, urgent uses Shipeh brand red. */
 export function ticketRowClasses(priority: string): string {
   switch (priority) {
     case "URGENT":
-      return "border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] border border-zinc-800/90";
+      return "border-l-[3px] border-l-brand bg-brand/[0.07] border border-zinc-800/90";
     case "HIGH":
       return "border-l-[3px] border-l-amber-500 bg-amber-500/[0.06] border border-zinc-800/90";
     case "NORMAL":

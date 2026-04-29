@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/shared/SessionProvider";
-import { ThemeSwitch } from "@/components/shared/ThemeSwitch";
 
 export const metadata: Metadata = {
   title: "Shipeh Leaderboard",
@@ -18,10 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "(()=>{try{var t=localStorage.getItem('ui-theme-mode');if(t==='light'){document.documentElement.classList.add('theme-light')}}catch(e){}})();",
           }}
         />
-        <SessionProvider>
-          {children}
-          <ThemeSwitch />
-        </SessionProvider>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

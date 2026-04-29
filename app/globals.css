@@ -7,7 +7,7 @@
   --foreground: 0 0% 95%;
   --card: 240 10% 7%;
   --card-foreground: 0 0% 95%;
-  --primary: 239 84% 67%;
+  --primary: 358 73% 50%;
   --primary-foreground: 0 0% 100%;
   --secondary: 240 4% 16%;
   --secondary-foreground: 0 0% 95%;
@@ -19,7 +19,10 @@
   --destructive-foreground: 0 0% 100%;
   --border: 240 4% 16%;
   --input: 240 4% 16%;
-  --ring: 239 84% 67%;
+  --ring: 358 73% 50%;
+  --brand: #d8232a;
+  --brand-600: #b91c1c;
+  --brand-700: #991b1b;
   --radius: 0.75rem;
 }
 
@@ -38,7 +41,7 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Public Sans", sans-serif;
 }
 
 @layer utilities {
@@ -67,13 +70,48 @@ body {
   100% { transform: translateY(0); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-.animate-rank-up {
-  animation: rank-up 850ms ease-out;
-}
+.animate-rank-up { animation: rank-up 850ms ease-out; }
+.animate-rank-down { animation: rank-down 850ms ease-out; }
 
-.animate-rank-down {
-  animation: rank-down 850ms ease-out;
-}
+/* ============================================================
+   Brand color (Shipeh dark red) — global remap of legacy
+   indigo/purple utility classes so we don't have to touch every
+   page. New components should use the `brand-*` palette directly.
+   ============================================================ */
+.bg-indigo-600,
+.bg-indigo-500,
+.bg-purple-600,
+.bg-purple-500 { background-color: var(--brand) !important; }
+.hover\:bg-indigo-600:hover,
+.hover\:bg-indigo-500:hover,
+.hover\:bg-purple-600:hover,
+.hover\:bg-purple-500:hover { background-color: var(--brand-600) !important; }
+
+.bg-indigo-600\/20,
+.bg-indigo-500\/20,
+.bg-indigo-600\/10,
+.bg-purple-600\/20 { background-color: rgba(216, 35, 42, 0.12) !important; }
+
+.text-indigo-400,
+.text-indigo-300,
+.text-indigo-500,
+.text-purple-400,
+.text-purple-300 { color: var(--brand) !important; }
+
+.border-indigo-500,
+.border-indigo-600,
+.border-indigo-500\/30,
+.border-purple-500,
+.border-purple-500\/30 { border-color: rgba(216, 35, 42, 0.45) !important; }
+
+.ring-indigo-500,
+.focus-visible\:ring-indigo-500:focus-visible,
+.focus\:ring-indigo-500:focus { --tw-ring-color: rgba(216, 35, 42, 0.55) !important; }
+
+.from-indigo-600 { --tw-gradient-from: #d8232a var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(216,35,42,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.to-indigo-600 { --tw-gradient-to: #d8232a var(--tw-gradient-to-position) !important; }
+.from-purple-600 { --tw-gradient-from: #b91c1c var(--tw-gradient-from-position) !important; --tw-gradient-to: rgba(185,28,28,0) var(--tw-gradient-to-position) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+.to-purple-600 { --tw-gradient-to: #b91c1c var(--tw-gradient-to-position) !important; }
 
 /* Rich text content inside notification bars */
 .notification-content p { display: inline; }
@@ -91,61 +129,106 @@ body {
 .ProseMirror p { margin: 0; }
 .ProseMirror ul { list-style: disc; padding-left: 1.2em; }
 .ProseMirror ol { list-style: decimal; padding-left: 1.2em; }
-.ProseMirror a { text-decoration: underline; color: #818cf8; }
+.ProseMirror a { text-decoration: underline; color: var(--brand); }
 .ProseMirror strong { font-weight: 700; }
 .ProseMirror em { font-style: italic; }
 .ProseMirror s { text-decoration: line-through; }
 .ProseMirror u { text-decoration: underline; }
 
-/* -------------------------
-   Light theme mode overrides
-   ------------------------- */
+/* ============================================================
+   Light theme — keep page surfaces light, brand red preserved.
+   The `.brand-keep` class on a button/element opts out of the
+   color-token remap so primary buttons stay brand-red with
+   white text (instead of being remapped to dark text).
+   ============================================================ */
 .theme-light body {
-  background: #f5f7fb;
-  color: #0f172a;
+  background: #f4f5fa;
+  color: #2f2b3d;
 }
 
-.theme-light .bg-zinc-950 { background-color: #f5f7fb !important; }
+.theme-light .bg-zinc-950 { background-color: #f4f5fa !important; }
 .theme-light .bg-zinc-900 { background-color: #ffffff !important; }
-.theme-light .bg-zinc-900\/50 { background-color: rgba(255, 255, 255, 0.82) !important; }
-.theme-light .bg-zinc-900\/80 { background-color: rgba(255, 255, 255, 0.93) !important; }
-.theme-light .bg-zinc-800 { background-color: #eef2f7 !important; }
-.theme-light .bg-zinc-800\/50 { background-color: rgba(236, 242, 247, 0.7) !important; }
-.theme-light .bg-zinc-800\/80 { background-color: rgba(236, 242, 247, 0.9) !important; }
+.theme-light .bg-zinc-900\/30,
+.theme-light .bg-zinc-900\/40,
+.theme-light .bg-zinc-900\/50,
+.theme-light .bg-zinc-900\/80 { background-color: #ffffff !important; }
+.theme-light .bg-zinc-800 { background-color: #f1f2f7 !important; }
+.theme-light .bg-zinc-800\/50 { background-color: rgba(241, 242, 247, 0.7) !important; }
+.theme-light .bg-zinc-800\/80 { background-color: rgba(241, 242, 247, 0.9) !important; }
 
 .theme-light .border-zinc-900,
+.theme-light .border-zinc-900\/60,
 .theme-light .border-zinc-800,
-.theme-light .border-zinc-700 { border-color: #dbe4ef !important; }
+.theme-light .border-zinc-800\/80,
+.theme-light .border-zinc-800\/90,
+.theme-light .border-zinc-700,
+.theme-light .border-zinc-700\/40,
+.theme-light .border-zinc-700\/50 { border-color: #e6e7ee !important; }
 
-.theme-light .text-white { color: #0f172a !important; }
-.theme-light .text-zinc-100 { color: #111827 !important; }
-.theme-light .text-zinc-200 { color: #1f2937 !important; }
-.theme-light .text-zinc-300 { color: #374151 !important; }
-.theme-light .text-zinc-400 { color: #4b5563 !important; }
+.theme-light .text-white { color: #2f2b3d !important; }
+.theme-light .text-zinc-100 { color: #2f2b3d !important; }
+.theme-light .text-zinc-200 { color: #3a3654 !important; }
+.theme-light .text-zinc-300 { color: #4b4868 !important; }
+.theme-light .text-zinc-400 { color: #6e6b7b !important; }
 .theme-light .text-zinc-500,
-.theme-light .text-zinc-600 { color: #6b7280 !important; }
+.theme-light .text-zinc-600 { color: #8b88a1 !important; }
 
 .theme-light .hover\:bg-zinc-800:hover,
 .theme-light .hover\:bg-zinc-900:hover,
 .theme-light .hover\:bg-zinc-800\/50:hover {
-  background-color: #e8eef6 !important;
+  background-color: #f1f2f7 !important;
 }
 
 .theme-light .hover\:text-zinc-100:hover,
 .theme-light .hover\:text-zinc-200:hover,
 .theme-light .hover\:text-zinc-300:hover {
-  color: #111827 !important;
+  color: #2f2b3d !important;
 }
 
+/* Form fields */
 .theme-light input,
 .theme-light textarea,
-.theme-light select {
+.theme-light select,
+.theme-light [data-radix-select-trigger] {
   background: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #d6e0ec !important;
+  color: #2f2b3d !important;
+  border-color: #dcdde6 !important;
 }
 
 .theme-light .shadow-lg,
 .theme-light .shadow-2xl {
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(46, 45, 71, 0.08), 0 1px 3px rgba(46, 45, 71, 0.04) !important;
 }
+
+/* Soft tints (badges, status pills) — keep them readable on white */
+.theme-light .bg-emerald-500\/10,
+.theme-light .bg-emerald-500\/15 { background-color: rgba(34, 197, 94, 0.10) !important; }
+.theme-light .bg-amber-500\/10,
+.theme-light .bg-amber-500\/15 { background-color: rgba(245, 158, 11, 0.12) !important; }
+.theme-light .bg-rose-500\/\[0\.07\] { background-color: rgba(225, 29, 72, 0.07) !important; }
+.theme-light .bg-amber-500\/\[0\.06\] { background-color: rgba(245, 158, 11, 0.07) !important; }
+.theme-light .bg-sky-500\/\[0\.05\] { background-color: rgba(14, 165, 233, 0.06) !important; }
+
+.theme-light .text-emerald-200\/90,
+.theme-light .text-emerald-300 { color: #047857 !important; }
+.theme-light .text-amber-200\/90,
+.theme-light .text-amber-300 { color: #b45309 !important; }
+.theme-light .text-indigo-200\/90 { color: var(--brand) !important; }
+
+/* Brand opt-out: any element with .brand-keep keeps brand red bg
+   + white text in light mode (used for primary CTAs). */
+.theme-light .brand-keep,
+.theme-light .brand-keep * { color: #ffffff !important; }
+.theme-light .brand-keep { background-color: var(--brand) !important; }
+.theme-light .brand-keep:hover { background-color: var(--brand-600) !important; }
+
+/* Buttons should keep contrast: bg-indigo-600 → red, text white */
+.theme-light .bg-indigo-600,
+.theme-light .bg-indigo-500,
+.theme-light .bg-purple-600,
+.theme-light .bg-purple-500 { background-color: var(--brand) !important; color: #ffffff !important; }
+.theme-light .bg-indigo-600 *,
+.theme-light .bg-purple-600 * { color: #ffffff !important; }
+
+/* Page hero / nav surfaces */
+.theme-light .navbar-shipeh { background: #ffffff !important; border-color: #e6e7ee !important; }
