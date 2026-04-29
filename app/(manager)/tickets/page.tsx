@@ -37,6 +37,22 @@ type TicketRow = {
 
 type Assignable = { id: string; name: string; email: string; role: string };
 
+/** API returns either a string or Zod `flatten()` shape on validation failure. */
+function formatCreateTicketError(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "Could not create ticket";
+  const err = (payload as { error?: unknown }).error;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object" && "formErrors" in err) {
+    const f = err as { formErrors: string[]; fieldErrors: Record<string, string[] | undefined> };
+    const lines: string[] = [...(f.formErrors ?? [])];
+    for (const [key, vals] of Object.entries(f.fieldErrors ?? {})) {
+      if (vals?.length) lines.push(...vals.map((v) => (key ? `${key}: ${v}` : v)));
+    }
+    return lines.filter(Boolean).join(" · ") || "Validation failed";
+  }
+  return "Could not create ticket";
+}
+
 export default function TicketsPage() {
   const { data: session } = useSession();
   const role = session?.user?.role;
@@ -51,6 +67,7 @@ export default function TicketsPage() {
   const [sellerFreeText, setSellerFreeText] = useState("");
   const [assignees, setAssignees] = useState<Assignable[]>([]);
   const [msg, setMsg] = useState("");
+  const [msgIsError, setMsgIsError] = useState(false);
 
   const [form, setForm] = useState({
     subject: "SOURCING" as string,
@@ -101,6 +118,7 @@ export default function TicketsPage() {
   async function createTicket(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
+    setMsgIsError(false);
     const body: Record<string, unknown> = {
       subject: form.subject,
       priority: form.priority,
@@ -110,19 +128,37 @@ export default function TicketsPage() {
     };
     if (seller) body.sellerId = seller.id;
     if (!seller && sellerFreeText.trim()) body.sellerNameText = sellerFreeText.trim();
-    if (form.recipient === "SPECIFIC_USER") body.assigneeId = form.assigneeId;
-    if (form.deadlineAt) body.deadlineAt = new Date(form.deadlineAt + "T12:00:00").toISOString();
+    if (form.recipient === "SPECIFIC_USER") body.assigneeId = form.assigneeId || null;
 
-    const r = await fetch("/api/tickets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      setMsg(typeof j.error === "string" ? j.error : "Could not create ticket");
+    if (form.deadlineAt?.trim()) {
+      const d = new Date(form.deadlineAt);
+      if (Number.isNaN(d.getTime())) {
+        setMsgIsError(true);
+        setMsg("Invalid deadline — clear it or pick a valid date and time.");
+        return;
+      }
+      body.deadlineAt = d.toISOString();
+    }
+
+    let r: Response;
+    try {
+      r = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      setMsgIsError(true);
+      setMsg("Network error — try again.");
       return;
     }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      setMsgIsError(true);
+      setMsg(formatCreateTicketError(j));
+      return;
+    }
+    setMsgIsError(false);
     setMsg("Ticket created.");
     setForm({
       subject: "SOURCING",
@@ -235,7 +271,9 @@ export default function TicketsPage() {
                 <Label>Deadline (optional)</Label>
                 <Input type="datetime-local" value={form.deadlineAt} onChange={(e) => setForm((f) => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
-              {msg && <p className="text-sm text-emerald-400">{msg}</p>}
+              {msg && (
+                <p className={`text-sm ${msgIsError ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>
+              )}
               <Button type="submit">Submit ticket</Button>
             </form>
           </CardContent>
