@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
 import { TICKET_PRIORITIES, TICKET_RECIPIENTS, TICKET_STATUSES, TICKET_SUBJECTS } from "@/lib/ticket-constants";
-import { Ticket, Plus } from "lucide-react";
+import { ticketRowClasses, ticketStatusBadgeClasses } from "@/lib/ticket-row-styles";
+import { cn } from "@/lib/utils";
+import { Ticket, Plus, Filter, Inbox } from "lucide-react";
 
 type TicketRow = {
   id: string;
@@ -28,7 +30,7 @@ type TicketRow = {
   recipient: string;
   createdAt: string;
   deadlineAt: string | null;
-  createdBy: { name: string };
+  createdBy: { id: string; name: string };
   assignee: { name: string } | null;
   seller: { name: string } | null;
   sellerNameText: string | null;
@@ -36,6 +38,12 @@ type TicketRow = {
 };
 
 type Assignable = { id: string; name: string; email: string; role: string };
+
+type Summary = {
+  byStatus: Record<string, number>;
+  total: number;
+  openPipeline: number;
+};
 
 /** API returns either a string or Zod `flatten()` shape on validation failure. */
 function formatCreateTicketError(payload: unknown): string {
@@ -53,14 +61,59 @@ function formatCreateTicketError(payload: unknown): string {
   return "Could not create ticket";
 }
 
+function buildListQuery(params: {
+  showArchived: boolean;
+  status: string;
+  priority: string;
+  createdBy: string;
+  dateFrom: string;
+  dateTo: string;
+}): string {
+  const p = new URLSearchParams();
+  p.set("take", "100");
+  if (params.showArchived) p.set("archived", "1");
+  if (params.status) p.set("status", params.status);
+  if (params.priority) p.set("priority", params.priority);
+  if (params.createdBy) p.set("createdBy", params.createdBy);
+  if (params.dateFrom) p.set("dateFrom", params.dateFrom);
+  if (params.dateTo) p.set("dateTo", params.dateTo);
+  return p.toString();
+}
+
+function buildSummaryQuery(params: {
+  showArchived: boolean;
+  createdBy: string;
+  dateFrom: string;
+  dateTo: string;
+}): string {
+  const p = new URLSearchParams();
+  if (params.showArchived) p.set("archived", "1");
+  if (params.createdBy) p.set("createdBy", params.createdBy);
+  if (params.dateFrom) p.set("dateFrom", params.dateFrom);
+  if (params.dateTo) p.set("dateTo", params.dateTo);
+  return p.toString();
+}
+
 export default function TicketsPage() {
   const { data: session } = useSession();
   const role = session?.user?.role;
-  const canCreate = role === "MANAGER" || role === "ADMIN";
+  const canCreate =
+    role === "MANAGER" || role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
+  const sellerOptional = role === "SOURCING_AGENT" || role === "ACCOUNTANT";
+  const canFilterByCreator =
+    role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
 
   const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterCreatedBy, setFilterCreatedBy] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
   const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -79,12 +132,34 @@ export default function TicketsPage() {
     deadlineAt: "",
   });
 
-  async function load() {
+  const listParams = useMemo(
+    () => ({
+      showArchived,
+      status: filterStatus,
+      priority: filterPriority,
+      createdBy: filterCreatedBy,
+      dateFrom: filterDateFrom,
+      dateTo: filterDateTo,
+    }),
+    [showArchived, filterStatus, filterPriority, filterCreatedBy, filterDateFrom, filterDateTo]
+  );
+
+  const summaryParams = useMemo(
+    () => ({
+      showArchived,
+      createdBy: filterCreatedBy,
+      dateFrom: filterDateFrom,
+      dateTo: filterDateTo,
+    }),
+    [showArchived, filterCreatedBy, filterDateFrom, filterDateTo]
+  );
+
+  const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    const q = showArchived ? "?archived=1&take=100" : "?take=100";
+    const q = buildListQuery(listParams);
     try {
-      const r = await fetch(`/api/tickets${q}`);
+      const r = await fetch(`/api/tickets?${q}`);
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         setTickets([]);
@@ -102,23 +177,71 @@ export default function TicketsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [listParams]);
+
+  const loadSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    const q = buildSummaryQuery(summaryParams);
+    try {
+      const r = await fetch(`/api/tickets/summary?${q}`);
+      const data = (await r.json().catch(() => ({}))) as Partial<Summary>;
+      if (!r.ok) {
+        setSummary(null);
+        return;
+      }
+      setSummary({
+        byStatus: data.byStatus ?? {},
+        total: typeof data.total === "number" ? data.total : 0,
+        openPipeline: typeof data.openPipeline === "number" ? data.openPipeline : 0,
+      });
+    } catch {
+      setSummary(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [summaryParams]);
 
   useEffect(() => {
     void load();
-  }, [showArchived]);
+  }, [load]);
 
   useEffect(() => {
-    fetch("/api/sellers").then((r) => r.json()).then(setSellers);
-    if (canCreate) {
-      fetch("/api/tickets/assignable-users").then((r) => r.json()).then(setAssignees);
-    }
-  }, [canCreate]);
+    void loadSummary();
+  }, [loadSummary]);
+
+  useEffect(() => {
+    void fetch("/api/sellers")
+      .then((r) => r.json())
+      .then(setSellers);
+  }, []);
+
+  useEffect(() => {
+    if (!role || !["ADMIN", "MANAGER", "SOURCING_AGENT", "ACCOUNTANT"].includes(role)) return;
+    void fetch("/api/tickets/assignable-users")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setAssignees);
+  }, [role]);
+
+  function clearFilters() {
+    setFilterStatus("");
+    setFilterPriority("");
+    setFilterCreatedBy("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setShowArchived(false);
+  }
 
   async function createTicket(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
     setMsgIsError(false);
+
+    if (!sellerOptional && !seller && !sellerFreeText.trim()) {
+      setMsgIsError(true);
+      setMsg("Choose a seller or enter seller details.");
+      return;
+    }
+
     const body: Record<string, unknown> = {
       subject: form.subject,
       priority: form.priority,
@@ -161,7 +284,7 @@ export default function TicketsPage() {
     setMsgIsError(false);
     setMsg("Ticket created.");
     setForm({
-      subject: "SOURCING",
+      subject: role === "ACCOUNTANT" ? "ACCOUNTING" : "SOURCING",
       priority: "NORMAL",
       recipient: "ALL_ADMINS",
       assigneeId: "",
@@ -172,7 +295,10 @@ export default function TicketsPage() {
     setSeller(null);
     setSellerFreeText("");
     void load();
+    void loadSummary();
   }
+
+  const bs = summary?.byStatus ?? {};
 
   return (
     <div className="space-y-8">
@@ -181,13 +307,177 @@ export default function TicketsPage() {
           <Ticket className="h-8 w-8 text-indigo-400" />
           Support tickets
         </h1>
-        <p className="text-zinc-400 mt-1">
-          Track sourcing, logistics, payments, and platform issues across teams. Archive resolved tickets to keep the queue clean.
+        <p className="text-zinc-400 mt-1 max-w-3xl">
+          Queue first — filter by dates, status, priority, or creator. Urgent rows are highlighted in red so they stand
+          out. Archive resolved items to keep the list calm.
         </p>
       </div>
 
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Inbox className="h-5 w-5 text-indigo-400" />
+          Queue
+        </h2>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {[
+            { label: "Active", value: summaryLoading ? "…" : String(summary?.openPipeline ?? 0), hint: "open + progress + waiting" },
+            { label: "Open", value: summaryLoading ? "…" : String(bs.OPEN ?? 0), hint: "" },
+            { label: "In progress", value: summaryLoading ? "…" : String(bs.IN_PROGRESS ?? 0), hint: "" },
+            { label: "Waiting", value: summaryLoading ? "…" : String(bs.WAITING ?? 0), hint: "" },
+            { label: "Resolved", value: summaryLoading ? "…" : String(bs.RESOLVED ?? 0), hint: "" },
+            { label: "Archived", value: summaryLoading ? "…" : String(bs.ARCHIVED ?? 0), hint: "" },
+            { label: "Total", value: summaryLoading ? "…" : String(summary?.total ?? 0), hint: "in current scope" },
+          ].map((c) => (
+            <div
+              key={c.label}
+              title={c.hint || undefined}
+              className="rounded-lg border border-zinc-800/90 bg-zinc-900/40 px-3 py-2.5"
+            >
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-medium">{c.label}</p>
+              <p className="text-lg font-semibold text-zinc-100 tabular-nums">{c.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <Card className="border-zinc-800 bg-zinc-900/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-zinc-200 flex items-center gap-2">
+              <Filter className="h-4 w-4 text-zinc-400" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pt-0">
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400">Status</Label>
+              <Select value={filterStatus || "__all__"} onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All statuses</SelectItem>
+                  {TICKET_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400">Priority</Label>
+              <Select value={filterPriority || "__all__"} onValueChange={(v) => setFilterPriority(v === "__all__" ? "" : v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All priorities</SelectItem>
+                  {TICKET_PRIORITIES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {canFilterByCreator ? (
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400">Created by</Label>
+                <Select value={filterCreatedBy || "__all__"} onValueChange={(v) => setFilterCreatedBy(v === "__all__" ? "" : v)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Anyone" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="__all__">Anyone</SelectItem>
+                    {assignees.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-xs text-zinc-400">Created by</Label>
+                <p className="text-sm text-zinc-500 pt-2">Your tickets and items assigned to you.</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400">From date</Label>
+              <Input className="h-9" type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400">To date</Label>
+              <Input className="h-9" type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
+            </div>
+            <div className="flex flex-col justify-end gap-2">
+              <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
+                <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+                Include archived
+              </label>
+              <Button type="button" variant="secondary" size="sm" className="w-full sm:w-auto" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {loadError && (
+          <div className="rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+            {loadError}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {tickets.map((t) => (
+              <Link key={t.id} href={`/tickets/${t.id}`} className="block group">
+                <div
+                  className={cn(
+                    "rounded-lg px-4 py-3 transition-colors group-hover:border-zinc-600/80",
+                    ticketRowClasses(t.priority)
+                  )}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-zinc-100 truncate">{t.title}</p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        {TICKET_SUBJECTS.find((s) => s.value === t.subject)?.label ?? t.subject} ·{" "}
+                        {TICKET_PRIORITIES.find((p) => p.value === t.priority)?.label ?? t.priority} ·{" "}
+                        {TICKET_RECIPIENTS.find((r) => r.value === t.recipient)?.label ?? t.recipient}
+                      </p>
+                    </div>
+                    <span className={cn("shrink-0 text-xs font-medium rounded-full px-2 py-0.5", ticketStatusBadgeClasses(t.status))}>
+                      {TICKET_STATUSES.find((s) => s.value === t.status)?.label ?? t.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2">
+                    Seller: {t.seller?.name ?? t.sellerNameText ?? "—"} · By {t.createdBy.name}
+                    {t.assignee ? ` · Assigned ${t.assignee.name}` : ""} · {t._count.comments} comments · {t._count.attachments}{" "}
+                    files · {new Date(t.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </Link>
+            ))}
+            {tickets.length === 0 && !loadError && (
+              <p className="text-zinc-500 text-sm">
+                No tickets in this view.{" "}
+                {canCreate
+                  ? "Adjust filters or create a ticket below."
+                  : "Adjust filters or ask an account manager to open a ticket."}
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
       {canCreate && (
-        <Card>
+        <Card className="border-zinc-800">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Plus className="h-5 w-5 text-indigo-400" />
@@ -197,24 +487,47 @@ export default function TicketsPage() {
           <CardContent>
             <form onSubmit={createTicket} className="space-y-4 max-w-2xl">
               <div className="space-y-2">
-                <Label>Seller</Label>
-                <SellerCombobox sellers={sellers} value={seller} onChange={setSeller} onNewSeller={(s) => setSellers((p) => [...p, s].sort((a, b) => a.name.localeCompare(b.name)))} />
-                <p className="text-xs text-zinc-500">Or describe the seller if not in the list:</p>
-                <Input
-                  value={sellerFreeText}
-                  onChange={(e) => setSellerFreeText(e.target.value)}
-                  placeholder="Seller name / phone / notes"
-                  disabled={!!seller}
+                <Label>Seller {sellerOptional && <span className="text-zinc-500 font-normal">(optional)</span>}</Label>
+                <SellerCombobox
+                  sellers={sellers}
+                  value={seller}
+                  onChange={setSeller}
+                  onNewSeller={(s) => setSellers((p) => [...p, s].sort((a, b) => a.name.localeCompare(b.name)))}
                 />
+                <p className="text-xs text-zinc-500">
+                  {sellerOptional
+                    ? "Link a seller when the ticket is about a specific account; otherwise leave blank."
+                    : "Or describe the seller if not in the list:"}
+                </p>
+                {!sellerOptional && (
+                  <Input
+                    value={sellerFreeText}
+                    onChange={(e) => setSellerFreeText(e.target.value)}
+                    placeholder="Seller name / phone / notes"
+                    disabled={!!seller}
+                  />
+                )}
+                {sellerOptional && (
+                  <Input
+                    value={sellerFreeText}
+                    onChange={(e) => setSellerFreeText(e.target.value)}
+                    placeholder="Optional: seller name / notes"
+                    disabled={!!seller}
+                  />
+                )}
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Subject</Label>
                   <Select value={form.subject} onValueChange={(v) => setForm((f) => ({ ...f, subject: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent className="max-h-64">
                       {TICKET_SUBJECTS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -222,10 +535,14 @@ export default function TicketsPage() {
                 <div className="space-y-2">
                   <Label>Priority</Label>
                   <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {TICKET_PRIORITIES.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        <SelectItem key={p.value} value={p.value}>
+                          {p.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -235,10 +552,14 @@ export default function TicketsPage() {
                 <div className="space-y-2">
                   <Label>Route to</Label>
                   <Select value={form.recipient} onValueChange={(v) => setForm((f) => ({ ...f, recipient: v, assigneeId: "" }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {TICKET_RECIPIENTS.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -247,7 +568,9 @@ export default function TicketsPage() {
                   <div className="space-y-2">
                     <Label>Assignee</Label>
                     <Select value={form.assigneeId} onValueChange={(v) => setForm((f) => ({ ...f, assigneeId: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
                       <SelectContent>
                         {assignees.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
@@ -265,69 +588,23 @@ export default function TicketsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Details</Label>
-                <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={6} required minLength={10} />
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  rows={6}
+                  required
+                  minLength={10}
+                />
               </div>
               <div className="space-y-2 max-w-xs">
                 <Label>Deadline (optional)</Label>
                 <Input type="datetime-local" value={form.deadlineAt} onChange={(e) => setForm((f) => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
-              {msg && (
-                <p className={`text-sm ${msgIsError ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>
-              )}
+              {msg && <p className={`text-sm ${msgIsError ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>}
               <Button type="submit">Submit ticket</Button>
             </form>
           </CardContent>
         </Card>
-      )}
-
-      {loadError && (
-        <div className="rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-          {loadError}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-lg font-semibold text-white">Queue</h2>
-        <label className="flex items-center gap-2 text-sm text-zinc-400">
-          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-          Show archived
-        </label>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {tickets.map((t) => (
-            <Link key={t.id} href={`/tickets/${t.id}`}>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/80 px-4 py-3 hover:border-zinc-600 transition-colors">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-zinc-100">{t.title}</p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      {TICKET_SUBJECTS.find((s) => s.value === t.subject)?.label ?? t.subject} · {t.priority} ·{" "}
-                      {TICKET_RECIPIENTS.find((r) => r.value === t.recipient)?.label ?? t.recipient}
-                    </p>
-                  </div>
-                  <span className="text-xs font-mono text-zinc-500">{t.status}</span>
-                </div>
-                <p className="text-xs text-zinc-500 mt-2">
-                  Seller: {t.seller?.name ?? t.sellerNameText ?? "—"} · By {t.createdBy.name}
-                  {t.assignee ? ` · Assigned ${t.assignee.name}` : ""} · {t._count.comments} comments ·{" "}
-                  {t._count.attachments} files
-                </p>
-              </div>
-            </Link>
-          ))}
-          {tickets.length === 0 && !loadError && (
-            <p className="text-zinc-500 text-sm">
-              No tickets in this view.{" "}
-              {canCreate ? "Create one above, or turn on “Show archived” for older items." : "Nothing in the queue yet."}
-            </p>
-          )}
-        </div>
       )}
     </div>
   );

@@ -5,6 +5,9 @@ import type { NextRequest } from "next/server";
 /** Sourcing agents: tickets + recommendations + read-only activity intel + profile only (no leaderboard). */
 const SOURCING_PAGE_PREFIXES = ["/tickets", "/feedback", "/ops-reports", "/profile"];
 
+/** Accountants: accounting app + tickets + profile. */
+const ACCOUNTANT_PAGE_PREFIXES = ["/tickets", "/accounting", "/profile"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -22,6 +25,13 @@ export async function middleware(req: NextRequest) {
     const allowed = SOURCING_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!allowed) {
       return NextResponse.redirect(new URL("/tickets", req.url));
+    }
+  }
+
+  if (token?.role === "ACCOUNTANT") {
+    const allowed = ACCOUNTANT_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/accounting", req.url));
     }
   }
 
