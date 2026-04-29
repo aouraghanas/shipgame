@@ -34,7 +34,10 @@ const ADMIN_LINKS = [
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
 ];
 
-const ACCOUNTANT_LINKS = [{ href: "/accounting", icon: Landmark, label: "Accounting" }];
+const ACCOUNTANT_LINKS = [
+  { href: "/accounting", icon: Landmark, label: "Accounting" },
+  { href: "/tickets", icon: Ticket, label: "Tickets" },
+];
 
 const SOURCING_LINKS = [
   { href: "/tickets", icon: Ticket, label: "Tickets" },

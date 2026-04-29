@@ -65,7 +65,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (workflowPatch) {
     if (!canManageTicketWorkflow(session, ticket))
-      return NextResponse.json({ error: "Only admins or sourcing handlers can update workflow fields" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Only admins, sourcing handlers, or accounting handlers can update workflow fields" },
+        { status: 403 }
+      );
     if (d.status !== undefined) {
       updates.status = d.status as SupportTicketStatus;
       if (d.status === "RESOLVED") updates.resolvedAt = new Date();

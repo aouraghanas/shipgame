@@ -7,7 +7,7 @@ import { NotificationBar } from "@/components/shared/NotificationBar";
 export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  if (session.user.role === "ACCOUNTANT") redirect("/accounting");
+  // Accountants: route allowlist in middleware (tickets + accounting + profile).
   // Admins can also access manager pages (leaderboard view)
   if (session.user.role === "SCREEN") redirect("/screen");
 

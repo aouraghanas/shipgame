@@ -3,14 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
-import {
-  SupportTicketPriority,
-  SupportTicketRecipient,
-  SupportTicketSubject,
-  SupportTicketStatus,
-} from "@prisma/client";
+import { SupportTicketPriority, SupportTicketRecipient, SupportTicketSubject } from "@prisma/client";
 import { canCreateTicket, canUseTicketsApp } from "@/lib/tickets-access";
+import { buildTicketListWhere, type TicketListQuery } from "@/lib/tickets-list-where";
 import { logAudit } from "@/lib/audit";
 
 const SUBJECTS = [
@@ -47,9 +42,6 @@ const postSchema = z
     assigneeId: z.string().optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    if (!data.sellerId?.trim() && !data.sellerNameText?.trim()) {
-      ctx.addIssue({ code: "custom", message: "Provide a seller from the list or a seller name/details." });
-    }
     if (data.recipient === "SPECIFIC_USER" && !data.assigneeId?.trim()) {
       ctx.addIssue({ code: "custom", path: ["assigneeId"], message: "Assignee required for specific recipient." });
     }
@@ -64,27 +56,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
-  const includeArchived = searchParams.get("archived") === "1";
-  const status = searchParams.get("status");
   const take = Math.min(Number(searchParams.get("take") || "80"), 200);
 
-  const role = session.user.role;
+  const listQ: TicketListQuery = {
+    includeArchived: searchParams.get("archived") === "1",
+    status: searchParams.get("status"),
+    priority: searchParams.get("priority"),
+    createdById: searchParams.get("createdBy"),
+    dateFrom: searchParams.get("dateFrom"),
+    dateTo: searchParams.get("dateTo"),
+  };
 
-  const parts: Prisma.SupportTicketWhereInput[] = [];
-  if (!includeArchived) parts.push({ status: { not: "ARCHIVED" } });
-
-  if (role === "MANAGER") {
-    parts.push({
-      OR: [{ createdById: session.user.id }, { assigneeId: session.user.id }],
-    });
-  }
-  /** ADMIN + SOURCING_AGENT: full queue (sourcing workflow still limited per ticket). */
-
-  if (status && ["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "ARCHIVED"].includes(status)) {
-    parts.push({ status: status as SupportTicketStatus });
-  }
-
-  const where: Prisma.SupportTicketWhereInput = parts.length ? { AND: parts } : {};
+  const where = buildTicketListWhere(session, listQ);
 
   const rows = await prisma.supportTicket.findMany({
     where,
@@ -111,6 +94,15 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const d = parsed.data;
+  const role = session.user.role;
+  const sellerOptional = role === "SOURCING_AGENT" || role === "ACCOUNTANT";
+  if (!sellerOptional && !d.sellerId?.trim() && !d.sellerNameText?.trim()) {
+    return NextResponse.json(
+      { error: "Provide a seller from the list or seller name/details." },
+      { status: 400 }
+    );
+  }
+
   let sellerId: string | null = d.sellerId?.trim() || null;
   if (sellerId) {
     const s = await prisma.seller.findUnique({ where: { id: sellerId } });

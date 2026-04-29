@@ -60,7 +60,7 @@ export default function TicketDetailPage() {
   }, [load]);
 
   useEffect(() => {
-    if (role === "MANAGER" || role === "ADMIN" || role === "SOURCING_AGENT") {
+    if (role === "MANAGER" || role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT") {
       fetch("/api/tickets/assignable-users")
         .then((r) => (r.ok ? r.json() : []))
         .then(setAssignees);
@@ -71,7 +71,9 @@ export default function TicketDetailPage() {
     ticket != null &&
     (role === "ADMIN" ||
       (role === "SOURCING_AGENT" &&
-        (ticket.recipient === "SOURCING_TEAM" || ticket.assignee?.id === session?.user?.id)));
+        (ticket.recipient === "SOURCING_TEAM" || ticket.assignee?.id === session?.user?.id)) ||
+      (role === "ACCOUNTANT" &&
+        (ticket.subject === "ACCOUNTING" || ticket.assignee?.id === session?.user?.id)));
 
   const canEditMetaUI =
     ticket != null &&
