@@ -155,6 +155,13 @@ body {
 .theme-light .bg-zinc-800 { background-color: #f1f2f7 !important; }
 .theme-light .bg-zinc-800\/50 { background-color: rgba(241, 242, 247, 0.7) !important; }
 .theme-light .bg-zinc-800\/80 { background-color: rgba(241, 242, 247, 0.9) !important; }
+.theme-light .bg-zinc-700 { background-color: #e6e7ee !important; color: #2f2b3d !important; }
+.theme-light .bg-zinc-700\/40,
+.theme-light .bg-zinc-700\/60,
+.theme-light .bg-zinc-700\/80 { background-color: rgba(230, 231, 238, 0.7) !important; }
+.theme-light .bg-zinc-900\/60,
+.theme-light .bg-zinc-900\/70,
+.theme-light .bg-zinc-900\/90 { background-color: #f7f8fc !important; }
 
 .theme-light .border-zinc-900,
 .theme-light .border-zinc-900\/60,
@@ -212,8 +219,87 @@ body {
 .theme-light .text-emerald-200\/90,
 .theme-light .text-emerald-300 { color: #047857 !important; }
 .theme-light .text-amber-200\/90,
-.theme-light .text-amber-300 { color: #b45309 !important; }
+.theme-light .text-amber-300,
+.theme-light .text-amber-400 { color: #b45309 !important; }
+.theme-light .text-amber-500 { color: #b45309 !important; }
+.theme-light .text-amber-600 { color: #92400e !important; }
+.theme-light .text-slate-300,
+.theme-light .text-slate-400 { color: #475569 !important; }
+.theme-light .text-red-300,
+.theme-light .text-red-400 { color: #b91c1c !important; }
+.theme-light .text-red-200 { color: #991b1b !important; }
 .theme-light .text-indigo-200\/90 { color: var(--brand) !important; }
+
+/* Dark accent backgrounds → soft tinted light surfaces */
+.theme-light .bg-amber-950\/20,
+.theme-light .bg-amber-950\/25,
+.theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950\/40 { background-color: #fff7e6 !important; }
+.theme-light .bg-amber-500\/10,
+.theme-light .bg-amber-500\/15,
+.theme-light .bg-amber-500\/20,
+.theme-light .bg-amber-500\/25,
+.theme-light .bg-amber-500\/30 { background-color: #fef3c7 !important; }
+.theme-light .bg-amber-900\/20 { background-color: #fde68a !important; }
+
+.theme-light .bg-red-950\/20,
+.theme-light .bg-red-950\/25,
+.theme-light .bg-red-950\/30,
+.theme-light .bg-red-950\/40,
+.theme-light .bg-red-950\/45 { background-color: #fff1f2 !important; }
+.theme-light .bg-red-500\/10,
+.theme-light .bg-red-500\/15,
+.theme-light .bg-red-500\/20 { background-color: #fee2e2 !important; }
+
+.theme-light .bg-slate-400\/20,
+.theme-light .bg-slate-500\/15,
+.theme-light .bg-slate-700\/20 { background-color: #eef2f7 !important; }
+
+.theme-light .bg-indigo-950\/20,
+.theme-light .bg-indigo-950\/30,
+.theme-light .bg-indigo-950\/40,
+.theme-light .bg-indigo-950\/60 { background-color: #fff1f2 !important; }
+
+/* Tinted gradients used in podium / battle cards — flatten to soft tints */
+.theme-light [class*="bg-gradient-to-"][class*="from-amber-500"] { background: #fff7e6 !important; }
+.theme-light [class*="bg-gradient-to-"][class*="from-slate-400"] { background: #eef2f7 !important; }
+.theme-light [class*="bg-gradient-to-"][class*="from-amber-700"] { background: #fef3c7 !important; }
+.theme-light [class*="bg-gradient-to-"][class*="from-indigo-950"] { background: #ffffff !important; }
+.theme-light [class*="bg-gradient-to-"][class*="from-red-950"] { background: #fff1f2 !important; }
+
+/* Border softening on light */
+.theme-light .border-amber-500,
+.theme-light .border-amber-500\/30,
+.theme-light .border-amber-500\/40 { border-color: rgba(245, 158, 11, 0.55) !important; }
+.theme-light .border-amber-700 { border-color: #b45309 !important; }
+.theme-light .border-slate-400,
+.theme-light .border-slate-500\/30 { border-color: rgba(100, 116, 139, 0.55) !important; }
+.theme-light .border-red-500,
+.theme-light .border-red-500\/30,
+.theme-light .border-red-500\/40,
+.theme-light .border-red-700,
+.theme-light .border-red-700\/70 { border-color: rgba(220, 38, 38, 0.55) !important; }
+.theme-light .border-emerald-500\/25,
+.theme-light .border-emerald-500\/30 { border-color: rgba(16, 185, 129, 0.45) !important; }
+
+/* Brand tint backgrounds — used widely (Badge default/destructive,
+   ticket urgent rows, leaderboard "from commission" notes). */
+.theme-light .bg-brand\/10,
+.theme-light .bg-brand\/15 { background-color: rgba(216, 35, 42, 0.10) !important; }
+.theme-light .bg-brand\/\[0\.07\] { background-color: rgba(216, 35, 42, 0.07) !important; }
+.theme-light .border-brand\/30 { border-color: rgba(216, 35, 42, 0.40) !important; }
+
+/* Solid amber/slate/brand chips need to remain solid + white text in
+   light mode (top-three rank chips, reward chips, punishment chip). */
+.theme-light .bg-amber-500 { background-color: #f59e0b !important; }
+.theme-light .bg-amber-700 { background-color: #b45309 !important; }
+.theme-light .bg-slate-500 { background-color: #64748b !important; }
+.theme-light .bg-amber-500.text-white,
+.theme-light .bg-amber-700.text-white,
+.theme-light .bg-slate-500.text-white,
+.theme-light .bg-amber-500 .text-white,
+.theme-light .bg-amber-700 .text-white,
+.theme-light .bg-slate-500 .text-white { color: #ffffff !important; }
 
 /* Brand opt-out: any element with .brand-keep keeps brand red bg
    + white text in light mode (used for primary CTAs). */

@@ -2,15 +2,17 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "secondary" | "outline" | "destructive";
+  variant?: "default" | "secondary" | "outline" | "destructive" | "gold" | "silver";
 }
 
 function Badge({ className, variant = "default", ...props }: BadgeProps) {
   const variants: Record<string, string> = {
     default: "bg-brand/15 text-brand border-transparent",
-    secondary: "bg-zinc-700 text-zinc-300 border-transparent",
-    outline: "border border-zinc-700 text-zinc-400",
+    secondary: "bg-zinc-800 text-zinc-100 border border-zinc-700/60",
+    outline: "border border-zinc-700 text-zinc-300 bg-transparent",
     destructive: "bg-brand/15 text-brand border-transparent",
+    gold: "bg-amber-500/15 text-amber-500 border border-amber-500/30",
+    silver: "bg-slate-500/15 text-slate-300 border border-slate-500/30",
   };
 
   return (

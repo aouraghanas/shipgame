@@ -14,7 +14,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const variants: Record<string, string> = {
       default: "brand-keep bg-brand text-white hover:bg-brand-600 shadow-sm",
       outline:
-        "border border-zinc-300 bg-transparent text-zinc-100 hover:bg-zinc-800 hover:border-zinc-200",
+        "border border-zinc-700 bg-transparent text-zinc-100 hover:bg-zinc-800 hover:border-zinc-600",
       ghost: "bg-transparent text-zinc-100 hover:bg-zinc-800",
       secondary: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700",
       destructive: "brand-keep bg-brand text-white hover:bg-brand-600 shadow-sm",
