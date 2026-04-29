@@ -1,10 +1,15 @@
 import { Avatar } from "@/components/shared/Avatar";
 import { Trophy, Medal } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
+import { punishmentTextForRank, rewardTextForRank } from "@/lib/month-rewards";
 
 interface Props {
   entries: LeaderboardEntry[];
-  rewardText: string | null;
+  winnerPlaces: number;
+  rewardTexts: [string | null, string | null, string | null];
+  loserPlaces: number;
+  punishmentTexts: [string | null, string | null];
+  totalManagers: number;
 }
 
 const medals = [
@@ -13,27 +18,35 @@ const medals = [
   { label: "3rd", color: "from-amber-700/20 to-amber-900/20 border-amber-700", text: "text-amber-600", icon: <Medal className="h-5 w-5 text-amber-600" /> },
 ];
 
-// Display order: 2nd, 1st, 3rd (podium style)
 const podiumOrder = [1, 0, 2];
 
-export function TopThreeCards({ entries, rewardText }: Props) {
+export function TopThreeCards({
+  entries,
+  winnerPlaces,
+  rewardTexts,
+  loserPlaces,
+  punishmentTexts,
+  totalManagers,
+}: Props) {
   const top3 = entries.slice(0, 3);
   if (top3.length === 0) return null;
 
   return (
-    <div className="flex items-end justify-center gap-4 mb-8">
+    <div className="flex items-end justify-center gap-4 mb-8 flex-wrap">
       {podiumOrder.map((idx) => {
         const entry = top3[idx];
         if (!entry) return <div key={idx} className="w-48" />;
         const medal = medals[idx];
         const isFirst = idx === 0;
+        const rw = rewardTextForRank(entry.rank, winnerPlaces, rewardTexts);
+        const pun = punishmentTextForRank(entry.rank, totalManagers, loserPlaces, punishmentTexts);
 
         return (
           <div
             key={entry.userId}
             className={`relative flex flex-col items-center rounded-2xl border bg-gradient-to-b ${medal.color} p-5 transition-transform hover:-translate-y-1 ${isFirst ? "w-52 pb-8 pt-7 shadow-lg shadow-amber-500/10 animate-pulse_gold" : "w-44"}`}
           >
-            <div className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full border ${medal.color.split(" ").find(c => c.startsWith("border-"))} bg-zinc-950 px-2.5 py-0.5 text-xs font-bold ${medal.text}`}>
+            <div className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full border ${medal.color.split(" ").find((c) => c.startsWith("border-"))} bg-zinc-950 px-2.5 py-0.5 text-xs font-bold ${medal.text}`}>
               {medal.icon}
               {medal.label}
             </div>
@@ -59,9 +72,15 @@ export function TopThreeCards({ entries, rewardText }: Props) {
               </div>
             </div>
 
-            {isFirst && rewardText && (
+            {rw && (
               <div className="mt-3 w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-center">
-                <p className="text-xs font-semibold text-amber-400">{rewardText}</p>
+                <p className="text-xs font-semibold text-amber-400">{rw}</p>
+              </div>
+            )}
+
+            {pun && (
+              <div className="mt-2 w-full rounded-lg border border-red-500/40 bg-red-950/40 px-2 py-1.5 text-center">
+                <p className="text-xs font-semibold text-red-400">{pun}</p>
               </div>
             )}
 

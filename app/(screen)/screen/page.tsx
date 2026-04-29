@@ -5,6 +5,7 @@ import { Avatar } from "@/components/shared/Avatar";
 import { formatMonthKey } from "@/lib/utils";
 import { Trophy, Medal, Crown } from "lucide-react";
 import type { LeaderboardData, LeaderboardEntry } from "@/types";
+import { punishmentTextForRank, rewardTextForRank } from "@/lib/month-rewards";
 
 const REFRESH_INTERVAL = 10000;
 
@@ -14,7 +15,17 @@ const medalConfig = [
   { icon: <Medal className="h-6 w-6 text-amber-600" />, ringColor: "ring-amber-700", bgGrad: "from-amber-700/10 to-zinc-900/10", textColor: "text-amber-600", border: "border-amber-700/40" },
 ];
 
-function TopCard({ entry, rank, rewardText }: { entry: LeaderboardEntry; rank: number; rewardText: string | null }) {
+function TopCard({
+  entry,
+  rank,
+  rewardLine,
+  punishmentLine,
+}: {
+  entry: LeaderboardEntry;
+  rank: number;
+  rewardLine: string | null;
+  punishmentLine: string | null;
+}) {
   const cfg = medalConfig[rank - 1];
   const isFirst = rank === 1;
   return (
@@ -30,9 +41,14 @@ function TopCard({ entry, rank, rewardText }: { entry: LeaderboardEntry; rank: n
         <div><p className="text-zinc-400 text-xs">Delivered</p><p className="font-bold text-zinc-200">{entry.deliveredTotal}</p></div>
         <div><p className="text-zinc-400 text-xs">Stock</p><p className="font-bold text-zinc-200">{entry.stockQty}</p></div>
       </div>
-      {isFirst && rewardText && (
-        <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-center">
-          <p className="text-sm font-bold text-amber-400">{rewardText}</p>
+      {rewardLine && (
+        <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-center w-full max-w-xs">
+          <p className="text-sm font-bold text-amber-400">{rewardLine}</p>
+        </div>
+      )}
+      {punishmentLine && (
+        <div className="mt-2 rounded-xl border border-red-500/30 bg-red-950/40 px-3 py-1.5 text-center w-full max-w-xs">
+          <p className="text-sm font-bold text-red-400">{punishmentLine}</p>
         </div>
       )}
       {entry.note && (
@@ -42,15 +58,15 @@ function TopCard({ entry, rank, rewardText }: { entry: LeaderboardEntry; rank: n
   );
 }
 
-function RankBar({ entry, isLast, punishmentText }: { entry: LeaderboardEntry; isLast: boolean; punishmentText: string | null }) {
+function RankBar({ entry, punishmentLine }: { entry: LeaderboardEntry; punishmentLine: string | null }) {
   return (
-    <div className={`flex items-center gap-5 rounded-2xl px-6 py-4 ${isLast ? "border border-red-700/50 bg-red-950/20" : "border border-zinc-800/60 bg-zinc-900/40"}`}>
+    <div className={`flex items-center gap-5 rounded-2xl px-6 py-4 ${punishmentLine ? "border border-red-700/50 bg-red-950/20" : "border border-zinc-800/60 bg-zinc-900/40"}`}>
       <span className="w-8 text-center text-lg font-bold text-zinc-500">{entry.rank}</span>
       <Avatar name={entry.name} avatarUrl={entry.avatarUrl} size="md" />
       <div className="flex-1 min-w-0">
         <p className="text-lg font-bold text-white">{entry.name}</p>
         {entry.note && <p className="text-sm italic text-indigo-300">&quot;{entry.note}&quot;</p>}
-        {isLast && punishmentText && <p className="text-sm text-red-400 font-semibold">{punishmentText}</p>}
+        {punishmentLine && <p className="text-sm text-red-400 font-semibold">{punishmentLine}</p>}
       </div>
       <div className="flex gap-8 text-center">
         <div><p className="text-xs text-zinc-400">Delivered</p><p className="text-lg font-bold text-zinc-100">{entry.deliveredTotal}</p></div>
@@ -76,14 +92,17 @@ export default function ScreenPage() {
     return () => clearInterval(id);
   }, [fetchData]);
 
-  const podiumOrder = [1, 0, 2]; // 2nd, 1st, 3rd
+  const podiumOrder = [1, 0, 2];
   const top3 = data?.entries.slice(0, 3) ?? [];
   const rest = data?.entries.slice(3) ?? [];
-  const lastEntry = data?.entries[data.entries.length - 1];
+  const total = data?.entries.length ?? 0;
+  const winnerPlaces = data?.winnerPlaces ?? 3;
+  const loserPlaces = data?.loserPlaces ?? 1;
+  const rewardTexts = data?.rewardTexts ?? [data?.rewardText ?? null, null, null];
+  const punishmentTexts = data?.punishmentTexts ?? [data?.punishmentText ?? null, null];
 
   return (
     <div className="min-h-screen flex flex-col p-8">
-      {/* Header */}
       <div className="flex items-center justify-between mb-10">
         <div className="flex items-center gap-3">
           <Trophy className="h-10 w-10 text-amber-400" />
@@ -101,26 +120,33 @@ export default function ScreenPage() {
         </div>
       ) : (
         <>
-          {/* Top 3 Podium */}
           {top3.length > 0 && (
-            <div className="flex items-end justify-center gap-6 mb-12">
+            <div className="flex items-end justify-center gap-6 mb-12 flex-wrap">
               {podiumOrder.map((idx) => {
                 const entry = top3[idx];
                 if (!entry) return <div key={idx} className="w-56" />;
-                return <TopCard key={entry.userId} entry={entry} rank={entry.rank} rewardText={data.rewardText} />;
+                const rw = rewardTextForRank(entry.rank, winnerPlaces, rewardTexts as [string | null, string | null, string | null]);
+                const pun = punishmentTextForRank(entry.rank, total, loserPlaces, punishmentTexts as [string | null, string | null]);
+                return (
+                  <TopCard
+                    key={entry.userId}
+                    entry={entry}
+                    rank={entry.rank}
+                    rewardLine={rw}
+                    punishmentLine={pun}
+                  />
+                );
               })}
             </div>
           )}
 
-          {/* Rest */}
           {rest.length > 0 && (
             <div className="space-y-3 max-w-4xl mx-auto w-full">
               {rest.map((entry) => (
                 <RankBar
                   key={entry.userId}
                   entry={entry}
-                  isLast={entry.userId === lastEntry?.userId && (data?.entries.length ?? 0) > 1}
-                  punishmentText={data.punishmentText}
+                  punishmentLine={punishmentTextForRank(entry.rank, total, loserPlaces, punishmentTexts as [string | null, string | null])}
                 />
               ))}
             </div>

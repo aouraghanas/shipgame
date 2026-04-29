@@ -15,11 +15,26 @@ export type LeaderboardEntry = {
   note: string | null;
 };
 
+export type MonthlyScoringDTO = {
+  deliveredDivisor: number;
+  stockBoundaryMid: number;
+  stockBoundaryHigh: number;
+  stockPointsLow: number;
+  stockPointsMid: number;
+  stockPointsHigh: number;
+};
+
 export type LeaderboardData = {
   monthKey: string;
   entries: LeaderboardEntry[];
+  /** First-place reward (same as rewardTexts[0] when set) */
   rewardText: string | null;
   punishmentText: string | null;
+  winnerPlaces: number;
+  loserPlaces: number;
+  rewardTexts: [string | null, string | null, string | null];
+  punishmentTexts: [string | null, string | null];
+  scoring: MonthlyScoringDTO;
 };
 
 export type UserWithStats = {

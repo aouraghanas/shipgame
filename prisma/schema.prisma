@@ -410,14 +410,37 @@ model NotificationDismissal {
   @@unique([notificationId, userId])
 }
 
-// Monthly reward and punishment configuration
+// Monthly reward, punishment, and scoring configuration
 model MonthConfig {
-  id             String   @id @default(cuid())
-  monthKey       String   @unique // YYYY-MM
+  id        String   @id @default(cuid())
+  monthKey  String   @unique // YYYY-MM
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Legacy single strings (fallback if per-place texts empty)
   rewardText     String?
   punishmentText String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+
+  /// How many top ranks show a reward line (1 = only 1st, 3 = podium)
+  winnerPlaces Int @default(3)
+  /// How many bottom ranks show punishment (1 = last only, 2 = last two)
+  loserPlaces  Int @default(1)
+
+  rewardText1     String?
+  rewardText2     String?
+  rewardText3     String?
+  punishmentText1 String?
+  punishmentText2 String?
+
+  /// Delivered score = deliveredTotal / deliveredDivisor (e.g. 100 => 1 pt per 100 orders)
+  deliveredDivisor Decimal @default(100) @db.Decimal(12, 4)
+  /// Min stock qty for mid-tier points (e.g. 100)
+  stockBoundaryMid  Int @default(100)
+  /// Min stock qty for high-tier points (e.g. 200)
+  stockBoundaryHigh Int @default(200)
+  stockPointsLow    Int @default(1)
+  stockPointsMid    Int @default(2)
+  stockPointsHigh   Int @default(3)
 }
 
 // ——— Support tickets (managers + admins create; sourcing team + admins handle) ———

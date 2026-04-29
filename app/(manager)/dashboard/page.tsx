@@ -9,8 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentMonthKey, formatMonthKey } from "@/lib/utils";
-import { stockEntryPoints } from "@/lib/scoring";
-import { Plus, Trash2, TrendingUp, Package, Trophy, Ticket } from "lucide-react";
+import {
+  DEFAULT_SCORING,
+  deliveredScore,
+  stockEntryPoints,
+  type ScoringConfig,
+} from "@/lib/scoring";
+import { Plus, Trash2, TrendingUp, Package, Trophy, Ticket, Info } from "lucide-react";
 
 type StockEntry = { id: string; quantity: number; sellerName: string | null; createdAt: string };
 
@@ -26,10 +31,10 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [loadingStock, setLoadingStock] = useState(true);
   const [successMsg, setSuccessMsg] = useState("");
+  const [scoreCfg, setScoreCfg] = useState<ScoringConfig>(DEFAULT_SCORING);
 
   useEffect(() => {
     if (!session) return;
-    // Load delivered total via leaderboard
     fetch(`/api/leaderboard?month=${monthKey}`)
       .then((r) => r.json())
       .then((d) => {
@@ -37,6 +42,16 @@ export default function DashboardPage() {
         const total = me?.deliveredTotal ?? 0;
         setDeliveredTotal(total);
         setEditDelivered(String(total));
+        if (d.scoring) {
+          setScoreCfg({
+            deliveredDivisor: Number(d.scoring.deliveredDivisor) || DEFAULT_SCORING.deliveredDivisor,
+            stockBoundaryMid: d.scoring.stockBoundaryMid ?? DEFAULT_SCORING.stockBoundaryMid,
+            stockBoundaryHigh: d.scoring.stockBoundaryHigh ?? DEFAULT_SCORING.stockBoundaryHigh,
+            stockPointsLow: d.scoring.stockPointsLow ?? DEFAULT_SCORING.stockPointsLow,
+            stockPointsMid: d.scoring.stockPointsMid ?? DEFAULT_SCORING.stockPointsMid,
+            stockPointsHigh: d.scoring.stockPointsHigh ?? DEFAULT_SCORING.stockPointsHigh,
+          });
+        }
       });
 
     fetch(`/api/stock?month=${monthKey}`)
@@ -72,9 +87,15 @@ export default function DashboardPage() {
   }
 
   const stockQty = stockEntries.reduce((s, e) => s + e.quantity, 0);
-  const stockScore = stockEntries.reduce((s, e) => s + stockEntryPoints(e.quantity), 0);
-  const dScore = deliveredTotal / 100;
+  const stockScore = stockEntries.reduce((s, e) => s + stockEntryPoints(e.quantity, scoreCfg), 0);
+  const dScore = deliveredScore(deliveredTotal, scoreCfg);
   const total = dScore + stockScore;
+
+  const tierLabel = (qty: number) => {
+    if (qty >= scoreCfg.stockBoundaryHigh) return `${scoreCfg.stockBoundaryHigh}+`;
+    if (qty >= scoreCfg.stockBoundaryMid) return `${scoreCfg.stockBoundaryMid}–${scoreCfg.stockBoundaryHigh - 1}`;
+    return `1–${scoreCfg.stockBoundaryMid - 1}`;
+  };
 
   return (
     <div>
@@ -95,6 +116,30 @@ export default function DashboardPage() {
           <span className="text-indigo-400 text-sm shrink-0 ml-auto group-hover:text-indigo-300">Go →</span>
         </div>
       </Link>
+
+      <Card className="mb-6 border-indigo-500/30 bg-zinc-900/40">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2 text-zinc-100">
+            <Info className="h-4 w-4 text-indigo-400 shrink-0" />
+            How your score works this month
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-zinc-400 space-y-2">
+          <p>
+            <span className="text-zinc-200 font-medium">Delivered orders:</span>{" "}
+            Points = your month-to-date total ÷ {scoreCfg.deliveredDivisor} (so every {scoreCfg.deliveredDivisor} delivered orders = 1 point toward the leaderboard).
+          </p>
+          <p>
+            <span className="text-zinc-200 font-medium">Stock entries:</span> each submission earns points by quantity:{" "}
+            <span className="text-zinc-300">
+              under {scoreCfg.stockBoundaryMid} → {scoreCfg.stockPointsLow} pt; {scoreCfg.stockBoundaryMid}–{scoreCfg.stockBoundaryHigh - 1} → {scoreCfg.stockPointsMid} pts; {scoreCfg.stockBoundaryHigh}+ → {scoreCfg.stockPointsHigh} pts (per line).
+            </span>
+          </p>
+          <p className="text-xs text-zinc-500">
+            Total score = delivered points + sum of stock entry points. Rankings use the same rules on the leaderboard.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Score summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -128,7 +173,9 @@ export default function DashboardPage() {
               </div>
               <Button type="submit" disabled={saving} className="w-full">{saving ? "Saving..." : "Update Total"}</Button>
             </form>
-            <p className="text-xs text-zinc-500 mt-3">Score: {dScore.toFixed(2)} points ({deliveredTotal} ÷ 100)</p>
+            <p className="text-xs text-zinc-500 mt-3">
+              Score: {dScore.toFixed(2)} points ({deliveredTotal} ÷ {scoreCfg.deliveredDivisor})
+            </p>
           </CardContent>
         </Card>
 
@@ -143,7 +190,9 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <Label>Quantity</Label>
                 <Input type="number" min={1} value={newQty} onChange={(e) => setNewQty(e.target.value)} placeholder="e.g. 150" required />
-                <p className="text-xs text-zinc-500">Points: {newQty ? stockEntryPoints(Number(newQty)) : "—"} ({Number(newQty) >= 200 ? "200+" : Number(newQty) >= 100 ? "100–199" : "1–99"} range)</p>
+                <p className="text-xs text-zinc-500">
+                  Points: {newQty ? stockEntryPoints(Number(newQty), scoreCfg) : "—"} ({newQty ? tierLabel(Number(newQty)) : "—"} tier)
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Seller name (optional)</Label>
@@ -171,7 +220,9 @@ export default function DashboardPage() {
                     <span className="font-semibold text-zinc-100">×{e.quantity}</span>
                     {e.sellerName && <span className="text-zinc-400 text-sm ml-2">— {e.sellerName}</span>}
                   </div>
-                  <Badge variant="secondary">{stockEntryPoints(e.quantity)} pt{stockEntryPoints(e.quantity) !== 1 ? "s" : ""}</Badge>
+                  <Badge variant="secondary">
+                    {stockEntryPoints(e.quantity, scoreCfg)} pt{stockEntryPoints(e.quantity, scoreCfg) !== 1 ? "s" : ""}
+                  </Badge>
                   <span className="text-xs text-zinc-500">{new Date(e.createdAt).toLocaleDateString()}</span>
                   <span title="Contact admin to delete"><Trash2 className="h-3.5 w-3.5 text-zinc-600" /></span>
                 </div>
