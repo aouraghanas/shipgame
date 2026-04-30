@@ -73,19 +73,21 @@ export function TopThreeCards({
         return (
           <div
             key={entry.userId}
-            className={`relative flex flex-col items-center rounded-2xl border ${style.border} bg-zinc-900 shadow-lg overflow-hidden transition-transform hover:-translate-y-1 ${
+            className={`relative flex flex-col items-center rounded-2xl border ${style.border} bg-zinc-900 shadow-lg transition-transform hover:-translate-y-1 ${
               isFirst ? "w-56 pb-6 pt-8" : "w-48 pb-5 pt-7"
             }`}
           >
-            {/* Top accent bar */}
-            <div className={`absolute inset-x-0 top-0 h-1.5 ${style.accentBar}`} />
-
-            {/* Rank chip */}
+            {/* Top accent bar — rounded so it sits flush with card corners */}
             <div
-              className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-bold shadow ${style.chip}`}
+              className={`absolute inset-x-0 top-0 h-1.5 rounded-t-2xl ${style.accentBar}`}
+            />
+
+            {/* Rank chip — floats above the card */}
+            <div
+              className={`absolute -top-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-md ${style.chip}`}
             >
               {style.icon}
-              {style.label}
+              <span className="leading-none">{style.label}</span>
             </div>
 
             <div className="px-4 flex flex-col items-center w-full">
