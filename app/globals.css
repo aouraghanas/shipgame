@@ -182,8 +182,21 @@ body {
 
 .theme-light .hover\:bg-zinc-800:hover,
 .theme-light .hover\:bg-zinc-900:hover,
-.theme-light .hover\:bg-zinc-800\/50:hover {
+.theme-light .hover\:bg-zinc-800\/50:hover,
+.theme-light .focus\:bg-zinc-800:focus,
+.theme-light .focus\:bg-zinc-900:focus,
+.theme-light .focus\:bg-zinc-700:focus {
   background-color: #f1f2f7 !important;
+}
+
+/* Radix dropdown / select highlighted item — safety net in case any
+   component still relies on data-[highlighted] without explicit color. */
+.theme-light [data-highlighted] {
+  background-color: rgba(216, 35, 42, 0.10) !important;
+  color: var(--brand) !important;
+}
+.theme-light [data-state="checked"] {
+  color: var(--brand) !important;
 }
 
 .theme-light .hover\:text-zinc-100:hover,
