@@ -15,6 +15,7 @@ enum Role {
   SCREEN
   ACCOUNTANT
   SOURCING_AGENT
+  LIBYAN_ACCOUNTANT
 }
 
 enum Status {

@@ -81,6 +81,7 @@ export default function EditUserPage() {
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SCREEN">Screen</SelectItem>
                     <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                    <SelectItem value="LIBYAN_ACCOUNTANT">Libyan accountant (LYD only)</SelectItem>
                     <SelectItem value="SOURCING_AGENT">Sourcing agent</SelectItem>
                   </SelectContent>
                 </Select>

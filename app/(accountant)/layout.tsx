@@ -9,7 +9,7 @@ export default async function AccountantLayout({ children }: { children: React.R
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  if (role !== "ACCOUNTANT" && role !== "ADMIN") redirect("/");
+  if (role !== "ACCOUNTANT" && role !== "ADMIN" && role !== "LIBYAN_ACCOUNTANT") redirect("/");
 
   return (
     <div className="min-h-screen bg-zinc-950">

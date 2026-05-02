@@ -40,6 +40,10 @@ const ACCOUNTANT_LINKS = [
   { href: "/tickets", icon: Ticket, label: "Tickets" },
 ];
 
+const LIBYAN_ACCOUNTANT_LINKS = [
+  { href: "/accounting", icon: Landmark, label: "Accounting (LYD)" },
+];
+
 const SOURCING_LINKS = [
   { href: "/tickets", icon: Ticket, label: "Tickets" },
   { href: "/feedback", icon: MessageSquareMore, label: "Recommendations" },
@@ -66,14 +70,16 @@ export function Navbar() {
       ? ADMIN_LINKS
       : role === "ACCOUNTANT"
         ? ACCOUNTANT_LINKS
-        : role === "SOURCING_AGENT"
-          ? SOURCING_LINKS
-          : MANAGER_LINKS;
+        : role === "LIBYAN_ACCOUNTANT"
+          ? LIBYAN_ACCOUNTANT_LINKS
+          : role === "SOURCING_AGENT"
+            ? SOURCING_LINKS
+            : MANAGER_LINKS;
 
   const homeHref =
     role === "ADMIN"
       ? "/admin"
-      : role === "ACCOUNTANT"
+      : role === "ACCOUNTANT" || role === "LIBYAN_ACCOUNTANT"
         ? "/accounting"
         : role === "SOURCING_AGENT"
           ? "/tickets"

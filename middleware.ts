@@ -8,6 +8,9 @@ const SOURCING_PAGE_PREFIXES = ["/tickets", "/feedback", "/ops-reports", "/profi
 /** Accountants: accounting app + tickets + profile. */
 const ACCOUNTANT_PAGE_PREFIXES = ["/tickets", "/accounting", "/profile"];
 
+/** Libyan accountants: accounting app only (LYD-scoped). */
+const LIBYAN_ACCOUNTANT_PAGE_PREFIXES = ["/accounting"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -30,6 +33,15 @@ export async function middleware(req: NextRequest) {
 
   if (token?.role === "ACCOUNTANT") {
     const allowed = ACCOUNTANT_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/accounting", req.url));
+    }
+  }
+
+  if (token?.role === "LIBYAN_ACCOUNTANT") {
+    const allowed = LIBYAN_ACCOUNTANT_PAGE_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
     if (!allowed) {
       return NextResponse.redirect(new URL("/accounting", req.url));
     }

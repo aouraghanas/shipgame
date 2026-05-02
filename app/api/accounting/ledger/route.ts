@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { AccountingCategory, AccountingCurrency, AccountingDirection } from "@prisma/client";
-import { canAccessAccounting, isAccountingAdmin } from "@/lib/accounting-access";
+import { canAccessAccounting, currencyScopeFor } from "@/lib/accounting-access";
 import { logAudit } from "@/lib/audit";
 
 const postSchema = z.object({
@@ -28,12 +28,15 @@ export async function GET(req: NextRequest) {
   const to = sp.get("to");
   const take = Math.min(Number(sp.get("take") || "200"), 500);
 
-  const where: { occurredAt?: { gte?: Date; lte?: Date } } = {};
+  const where: { occurredAt?: { gte?: Date; lte?: Date }; currency?: AccountingCurrency } = {};
   if (from || to) {
     where.occurredAt = {};
     if (from) where.occurredAt.gte = new Date(from);
     if (to) where.occurredAt.lte = new Date(to + "T23:59:59.999Z");
   }
+
+  const scope = currencyScopeFor(session);
+  if (scope) where.currency = scope;
 
   const rows = await prisma.accountingLedgerEntry.findMany({
     where,
@@ -59,6 +62,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = postSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+
+  const scope = currencyScopeFor(session);
+  if (scope && parsed.data.currency !== scope) {
+    return NextResponse.json(
+      { error: `You can only record entries in ${scope}.` },
+      { status: 403 }
+    );
+  }
 
   const row = await prisma.accountingLedgerEntry.create({
     data: {

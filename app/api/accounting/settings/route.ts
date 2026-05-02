@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { canAccessAccounting, isAccountingAdmin } from "@/lib/accounting-access";
+import { canUseAccountingTools, isAccountingAdmin } from "@/lib/accounting-access";
 import { logAudit } from "@/lib/audit";
 
 const patchSchema = z.object({
@@ -23,7 +23,7 @@ async function ensureSettings() {
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessAccounting(session))
+  if (!session || !canUseAccountingTools(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const s = await ensureSettings();
   return NextResponse.json({

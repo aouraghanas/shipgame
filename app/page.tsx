@@ -11,6 +11,7 @@ export default async function RootPage() {
   if (role === "ADMIN") redirect("/admin");
   if (role === "SCREEN") redirect("/screen");
   if (role === "ACCOUNTANT") redirect("/accounting");
+  if (role === "LIBYAN_ACCOUNTANT") redirect("/accounting");
   if (role === "SOURCING_AGENT") redirect("/tickets");
   redirect("/dashboard");
 }

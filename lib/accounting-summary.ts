@@ -9,12 +9,19 @@ export type SummaryRow = {
   total: string;
 };
 
-export async function buildAccountingSummary(from: Date, to: Date): Promise<{
+export async function buildAccountingSummary(
+  from: Date,
+  to: Date,
+  options?: { currency?: AccountingCurrency }
+): Promise<{
   rows: SummaryRow[];
   byCurrency: Record<AccountingCurrency, { revenue: string; expense: string; net: string }>;
 }> {
   const entries = await prisma.accountingLedgerEntry.findMany({
-    where: { occurredAt: { gte: from, lte: to } },
+    where: {
+      occurredAt: { gte: from, lte: to },
+      ...(options?.currency ? { currency: options.currency } : {}),
+    },
     select: { category: true, direction: true, currency: true, amount: true },
   });
 

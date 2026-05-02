@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { canAccessAccounting } from "@/lib/accounting-access";
+import { canAccessAccounting, currencyScopeFor } from "@/lib/accounting-access";
 import { buildAccountingSummary } from "@/lib/accounting-summary";
 
 export async function GET(req: NextRequest) {
@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   if (Number.isNaN(fromD.getTime()) || Number.isNaN(toD.getTime()))
     return NextResponse.json({ error: "Invalid date" }, { status: 400 });
 
-  const summary = await buildAccountingSummary(fromD, toD);
+  const scope = currencyScopeFor(session);
+  const summary = await buildAccountingSummary(fromD, toD, scope ? { currency: scope } : undefined);
   return NextResponse.json(summary);
 }

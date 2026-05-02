@@ -41,21 +41,57 @@ type LedgerRow = {
   createdBy: { id: string; name: string };
 };
 
-function monthRange() {
-  const d = new Date();
-  const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  const to = d.toISOString().split("T")[0];
-  return { from, to };
+type DateRange = { from: string; to: string };
+type DatePreset = "all" | "month" | "30d" | "year" | "custom";
+
+const ALL_TIME_FROM = "2000-01-01";
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
 }
+
+function presetRange(preset: DatePreset, current: DateRange): DateRange {
+  const today = todayStr();
+  const d = new Date();
+  switch (preset) {
+    case "all":
+      return { from: ALL_TIME_FROM, to: today };
+    case "month":
+      return { from: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`, to: today };
+    case "30d": {
+      const from = new Date(d);
+      from.setDate(from.getDate() - 29);
+      return { from: from.toISOString().split("T")[0], to: today };
+    }
+    case "year":
+      return { from: `${d.getFullYear()}-01-01`, to: today };
+    case "custom":
+    default:
+      return current;
+  }
+}
+
+const PRESET_BUTTONS: { id: DatePreset; label: string }[] = [
+  { id: "all", label: "All time" },
+  { id: "month", label: "This month" },
+  { id: "30d", label: "Last 30 days" },
+  { id: "year", label: "This year" },
+  { id: "custom", label: "Custom" },
+];
 
 export function AccountingWorkspace() {
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN";
+  const isLibyaOnly = role === "LIBYAN_ACCOUNTANT";
+
   const [tab, setTab] = useState<"overview" | "ledger" | "tools" | "ai" | "admin">("overview");
 
-  const initial = useMemo(() => monthRange(), []);
+  // Default the whole platform to "All time" on load.
+  const initial = useMemo(() => presetRange("all", { from: "", to: "" }), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
+  const [preset, setPreset] = useState<DatePreset>("all");
   const [summary, setSummary] = useState<{
     rows: { category: string; direction: string; currency: string; total: string }[];
     byCurrency: Record<string, { revenue: string; expense: string; net: string }>;
@@ -80,25 +116,33 @@ export function AccountingWorkspace() {
     setLoading(true);
     setMsg("");
     try {
-      const [sRes, lRes, fxRes, setRes] = await Promise.all([
+      const baseRequests: Promise<Response>[] = [
         fetch(`/api/accounting/summary?from=${from}&to=${to}`),
         fetch(`/api/accounting/ledger?from=${from}&to=${to}&take=300`),
-        fetch("/api/accounting/exchange-rates?take=40"),
-        fetch("/api/accounting/settings"),
-      ]);
-      if (sRes.ok) setSummary(await sRes.json());
-      if (lRes.ok) setLedger(await lRes.json());
-      if (fxRes.ok) setFxRows(await fxRes.json());
-      if (setRes.ok) setSettings(await setRes.json());
+      ];
+      // Tools / FX / settings are off-limits for libyan-only accountants.
+      if (!isLibyaOnly) {
+        baseRequests.push(
+          fetch("/api/accounting/exchange-rates?take=40"),
+          fetch("/api/accounting/settings")
+        );
+      }
+      const responses = await Promise.all(baseRequests);
+      const [sRes, lRes, fxRes, setRes] = responses;
+      if (sRes?.ok) setSummary(await sRes.json());
+      if (lRes?.ok) setLedger(await lRes.json());
+      if (fxRes?.ok) setFxRows(await fxRes.json());
+      if (setRes?.ok) setSettings(await setRes.json());
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, isLibyaOnly]);
 
   const loadCities = useCallback(async () => {
+    if (isLibyaOnly) return;
     const r = await fetch("/api/accounting/cities");
     if (r.ok) setCities(await r.json());
-  }, []);
+  }, [isLibyaOnly]);
 
   useEffect(() => {
     void loadSummary();
@@ -107,6 +151,14 @@ export function AccountingWorkspace() {
   useEffect(() => {
     void loadCities();
   }, [loadCities]);
+
+  function applyPreset(p: DatePreset) {
+    setPreset(p);
+    if (p === "custom") return;
+    const r = presetRange(p, { from, to });
+    setFrom(r.from);
+    setTo(r.to);
+  }
 
   async function saveSettings(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -185,6 +237,13 @@ export function AccountingWorkspace() {
     description: "",
   });
 
+  // Libyan accountant is locked to LYD entries.
+  useEffect(() => {
+    if (isLibyaOnly && ledgerForm.currency !== "LYD") {
+      setLedgerForm((f) => ({ ...f, currency: "LYD" }));
+    }
+  }, [isLibyaOnly, ledgerForm.currency]);
+
   async function saveLedger(e: React.FormEvent) {
     e.preventDefault();
     const r = await fetch("/api/accounting/ledger", {
@@ -236,20 +295,56 @@ export function AccountingWorkspace() {
     );
   }, [settings, cities, loadCities, loadSummary]);
 
+  const visibleCurrencies = (isLibyaOnly ? ["LYD"] : ["LYD", "USD", "MAD"]) as Array<"LYD" | "USD" | "MAD">;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs text-zinc-400">From</Label>
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {PRESET_BUTTONS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => applyPreset(p.id)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                preset === p.id
+                  ? "brand-keep bg-brand text-white shadow-sm"
+                  : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs text-zinc-400">To</Label>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs text-zinc-400">From</Label>
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                setPreset("custom");
+              }}
+              className="w-40"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-zinc-400">To</Label>
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value);
+                setPreset("custom");
+              }}
+              className="w-40"
+            />
+          </div>
+          <Button type="button" variant="secondary" onClick={() => void loadSummary()} disabled={loading}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Button>
         </div>
-        <Button type="button" variant="secondary" onClick={() => void loadSummary()} disabled={loading}>
-          {loading ? "Refreshing…" : "Refresh"}
-        </Button>
       </div>
       {msg && <p className="text-sm text-emerald-400">{msg}</p>}
 
@@ -258,8 +353,12 @@ export function AccountingWorkspace() {
           [
             ["overview", "Overview"],
             ["ledger", "Ledger"],
-            ["tools", "Quick calculators"],
-            ["ai", "AI report"],
+            ...(isLibyaOnly
+              ? ([] as const)
+              : ([
+                  ["tools", "Quick calculators"],
+                  ["ai", "AI report"],
+                ] as const)),
             ...(isAdmin ? ([["admin", "Fees & FX (admin)"]] as const) : []),
           ] as const
         ).map(([id, label]) => (
@@ -268,7 +367,9 @@ export function AccountingWorkspace() {
             type="button"
             onClick={() => setTab(id as "overview" | "ledger" | "tools" | "ai" | "admin")}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              tab === id ? "bg-indigo-600/30 text-indigo-200" : "text-zinc-400 hover:text-zinc-100"
+              tab === id
+                ? "brand-keep bg-brand text-white"
+                : "text-zinc-400 hover:text-zinc-100"
             }`}
           >
             {label}
@@ -280,8 +381,8 @@ export function AccountingWorkspace() {
         <div className="space-y-4">
           {summary && (
             <>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {(["LYD", "USD", "MAD"] as const).map((cur) => (
+              <div className={`grid gap-4 ${visibleCurrencies.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-3"}`}>
+                {visibleCurrencies.map((cur) => (
                   <Card key={cur}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm text-zinc-300">{cur} net (period)</CardTitle>
@@ -381,17 +482,21 @@ export function AccountingWorkspace() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Currency</Label>
-                  <Select
-                    value={ledgerForm.currency}
-                    onValueChange={(v) => setLedgerForm((f) => ({ ...f, currency: v }))}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LYD">LYD</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="MAD">MAD</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {isLibyaOnly ? (
+                    <Input value="LYD" readOnly disabled />
+                  ) : (
+                    <Select
+                      value={ledgerForm.currency}
+                      onValueChange={(v) => setLedgerForm((f) => ({ ...f, currency: v }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LYD">LYD</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="MAD">MAD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Date</Label>
@@ -449,9 +554,9 @@ export function AccountingWorkspace() {
         </div>
       )}
 
-      {tab === "tools" && <div>{tools}</div>}
+      {!isLibyaOnly && tab === "tools" && <div>{tools}</div>}
 
-      {tab === "ai" && (
+      {!isLibyaOnly && tab === "ai" && (
         <div className="space-y-4">
           <Card>
             <CardHeader>

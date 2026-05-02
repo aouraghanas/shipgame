@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { canAccessAccounting } from "@/lib/accounting-access";
+import { canUseAccountingTools } from "@/lib/accounting-access";
 import { buildAccountingSummary } from "@/lib/accounting-summary";
 import { analyzeAccountingWithAI } from "@/lib/accounting-ai";
 import { logAudit } from "@/lib/audit";
@@ -15,7 +15,7 @@ const bodySchema = z.object({
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !canAccessAccounting(session))
+  if (!session || !canUseAccountingTools(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const json = await req.json();
