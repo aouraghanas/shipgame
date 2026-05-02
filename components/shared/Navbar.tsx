@@ -18,52 +18,58 @@ import {
   MessageSquareMore,
   Landmark,
   Ticket,
+  type LucideIcon,
 } from "lucide-react";
 import { ThemeSwitch } from "./ThemeSwitch";
+import { LanguageSwitch } from "./LanguageSwitch";
+import { useT } from "./I18nProvider";
 
-const ADMIN_LINKS = [
-  { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/tickets", icon: Ticket, label: "Tickets" },
-  { href: "/admin/users", icon: Users, label: "Users" },
-  { href: "/admin/rewards", icon: Gift, label: "Rewards" },
-  { href: "/admin/activity", icon: Activity, label: "Activity" },
-  { href: "/admin/reports", icon: BarChart2, label: "Reports" },
-  { href: "/accounting", icon: Landmark, label: "Accounting" },
-  { href: "/admin/performance", icon: TrendingUp, label: "Performance" },
-  { href: "/admin/feedback", icon: MessageSquareMore, label: "Recommendations" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
-  { href: "/admin/notifications", icon: Bell, label: "Notifications" },
+type NavLink = { href: string; icon: LucideIcon; labelKey: string };
+
+const ADMIN_LINKS: NavLink[] = [
+  { href: "/admin", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+  { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/admin/users", icon: Users, labelKey: "nav.users" },
+  { href: "/admin/rewards", icon: Gift, labelKey: "nav.rewards" },
+  { href: "/admin/activity", icon: Activity, labelKey: "nav.activity" },
+  { href: "/admin/reports", icon: BarChart2, labelKey: "nav.reports" },
+  { href: "/accounting", icon: Landmark, labelKey: "nav.accounting" },
+  { href: "/admin/performance", icon: TrendingUp, labelKey: "nav.performance" },
+  { href: "/admin/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
+  { href: "/leaderboard", icon: Trophy, labelKey: "nav.leaderboard" },
+  { href: "/admin/notifications", icon: Bell, labelKey: "nav.notifications" },
 ];
 
-const ACCOUNTANT_LINKS = [
-  { href: "/accounting", icon: Landmark, label: "Accounting" },
-  { href: "/tickets", icon: Ticket, label: "Tickets" },
+const ACCOUNTANT_LINKS: NavLink[] = [
+  { href: "/accounting", icon: Landmark, labelKey: "nav.accounting" },
+  { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
 ];
 
-const LIBYAN_ACCOUNTANT_LINKS = [
-  { href: "/accounting", icon: Landmark, label: "Accounting (LYD)" },
+const LIBYAN_ACCOUNTANT_LINKS: NavLink[] = [
+  { href: "/accounting", icon: Landmark, labelKey: "nav.accounting.lyd" },
 ];
 
-const SOURCING_LINKS = [
-  { href: "/tickets", icon: Ticket, label: "Tickets" },
-  { href: "/feedback", icon: MessageSquareMore, label: "Recommendations" },
-  { href: "/ops-reports", icon: BarChart2, label: "Activity intel" },
-  { href: "/profile", icon: User, label: "Profile" },
+const SOURCING_LINKS: NavLink[] = [
+  { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
+  { href: "/ops-reports", icon: BarChart2, labelKey: "nav.activityIntel" },
+  { href: "/profile", icon: User, labelKey: "nav.profile" },
 ];
 
-const MANAGER_LINKS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/tickets", icon: Ticket, label: "Tickets" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard" },
-  { href: "/activity", icon: Activity, label: "Activity" },
-  { href: "/feedback", icon: MessageSquareMore, label: "Recommendations" },
-  { href: "/profile", icon: User, label: "Profile" },
+const MANAGER_LINKS: NavLink[] = [
+  { href: "/dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+  { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/leaderboard", icon: Trophy, labelKey: "nav.leaderboard" },
+  { href: "/activity", icon: Activity, labelKey: "nav.activity" },
+  { href: "/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
+  { href: "/profile", icon: User, labelKey: "nav.profile" },
 ];
 
 export function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const role = session?.user?.role;
+  const t = useT();
 
   const links =
     role === "ADMIN"
@@ -98,7 +104,7 @@ export function Navbar() {
         </Link>
 
         <div className="flex flex-wrap items-center gap-1 flex-1 min-w-[12rem]">
-          {links.map(({ href, icon: Icon, label }) => {
+          {links.map(({ href, icon: Icon, labelKey }) => {
             const active =
               pathname === href ||
               (href !== "/admin" && href !== "/dashboard" && pathname.startsWith(href));
@@ -113,7 +119,7 @@ export function Navbar() {
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {label}
+                {t(labelKey)}
               </Link>
             );
           })}
@@ -123,6 +129,7 @@ export function Navbar() {
           {session?.user?.name && (
             <span className="text-xs text-zinc-500 hidden sm:block">{session.user.name}</span>
           )}
+          <LanguageSwitch variant="inline" />
           <ThemeSwitch variant="inline" />
           <button
             type="button"
@@ -130,7 +137,7 @@ export function Navbar() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-brand hover:bg-zinc-800 transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:block">Sign out</span>
+            <span className="hidden sm:block">{t("common.signOut")}</span>
           </button>
         </div>
       </div>

@@ -19,6 +19,7 @@ import {
 } from "@/lib/accounting-constants";
 import { dec, shippingMarginLydTotal, percentOfAmount, leadFeeTotalUsd } from "@/lib/accounting-calcs";
 import { Calculator, Landmark, Sparkles, Trash2 } from "lucide-react";
+import { useT } from "@/components/shared/I18nProvider";
 
 type CityRow = {
   id: string;
@@ -71,12 +72,12 @@ function presetRange(preset: DatePreset, current: DateRange): DateRange {
   }
 }
 
-const PRESET_BUTTONS: { id: DatePreset; label: string }[] = [
-  { id: "all", label: "All time" },
-  { id: "month", label: "This month" },
-  { id: "30d", label: "Last 30 days" },
-  { id: "year", label: "This year" },
-  { id: "custom", label: "Custom" },
+const PRESET_BUTTONS: { id: DatePreset; key: string }[] = [
+  { id: "all", key: "accounting.preset.all" },
+  { id: "month", key: "accounting.preset.month" },
+  { id: "30d", key: "accounting.preset.30d" },
+  { id: "year", key: "accounting.preset.year" },
+  { id: "custom", key: "accounting.preset.custom" },
 ];
 
 export function AccountingWorkspace() {
@@ -84,6 +85,7 @@ export function AccountingWorkspace() {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
   const isLibyaOnly = role === "LIBYAN_ACCOUNTANT";
+  const t = useT();
 
   const [tab, setTab] = useState<"overview" | "ledger" | "tools" | "ai" | "admin">("overview");
 
@@ -312,13 +314,13 @@ export function AccountingWorkspace() {
                   : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               }`}
             >
-              {p.label}
+              {t(p.key)}
             </button>
           ))}
         </div>
         <div className="flex flex-wrap items-end gap-4">
           <div className="space-y-1">
-            <Label className="text-xs text-zinc-400">From</Label>
+            <Label className="text-xs text-zinc-400">{t("common.from")}</Label>
             <Input
               type="date"
               value={from}
@@ -330,7 +332,7 @@ export function AccountingWorkspace() {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-zinc-400">To</Label>
+            <Label className="text-xs text-zinc-400">{t("common.to")}</Label>
             <Input
               type="date"
               value={to}
@@ -342,7 +344,7 @@ export function AccountingWorkspace() {
             />
           </div>
           <Button type="button" variant="secondary" onClick={() => void loadSummary()} disabled={loading}>
-            {loading ? "Refreshing…" : "Refresh"}
+            {loading ? t("common.refreshing") : t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -351,17 +353,17 @@ export function AccountingWorkspace() {
       <div className="flex flex-wrap gap-1 rounded-lg bg-zinc-900 p-1">
         {(
           [
-            ["overview", "Overview"],
-            ["ledger", "Ledger"],
+            ["overview", "accounting.tabs.overview"],
+            ["ledger", "accounting.tabs.ledger"],
             ...(isLibyaOnly
               ? ([] as const)
               : ([
-                  ["tools", "Quick calculators"],
-                  ["ai", "AI report"],
+                  ["tools", "accounting.tabs.tools"],
+                  ["ai", "accounting.tabs.ai"],
                 ] as const)),
-            ...(isAdmin ? ([["admin", "Fees & FX (admin)"]] as const) : []),
+            ...(isAdmin ? ([["admin", "accounting.tabs.admin"]] as const) : []),
           ] as const
-        ).map(([id, label]) => (
+        ).map(([id, labelKey]) => (
           <button
             key={id}
             type="button"
@@ -372,7 +374,7 @@ export function AccountingWorkspace() {
                 : "text-zinc-400 hover:text-zinc-100"
             }`}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>
@@ -385,7 +387,7 @@ export function AccountingWorkspace() {
                 {visibleCurrencies.map((cur) => (
                   <Card key={cur}>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-zinc-300">{cur} net (period)</CardTitle>
+                      <CardTitle className="text-sm text-zinc-300">{t("accounting.netPeriod", { cur })}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-2xl font-semibold text-white">{summary.byCurrency[cur]?.net ?? "0"}</p>
@@ -398,16 +400,16 @@ export function AccountingWorkspace() {
               </div>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">By category</CardTitle>
+                  <CardTitle className="text-base">{t("accounting.byCategory")}</CardTitle>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-zinc-500 border-b border-zinc-800">
-                        <th className="py-2 pr-4">Category</th>
-                        <th className="py-2 pr-4">Dir</th>
-                        <th className="py-2 pr-4">CCY</th>
-                        <th className="py-2">Total</th>
+                        <th className="py-2 pr-4">{t("accounting.tableCategory")}</th>
+                        <th className="py-2 pr-4">{t("accounting.tableDir")}</th>
+                        <th className="py-2 pr-4">{t("accounting.tableCcy")}</th>
+                        <th className="py-2">{t("accounting.tableTotal")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -437,26 +439,26 @@ export function AccountingWorkspace() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Landmark className="h-5 w-5 text-indigo-400" />
-                New ledger line
+                {t("accounting.newLine")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={saveLedger} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Direction</Label>
+                  <Label className="text-xs">{t("accounting.direction")}</Label>
                   <Select
                     value={ledgerForm.direction}
                     onValueChange={(v) => setLedgerForm((f) => ({ ...f, direction: v }))}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EXPENSE">Expense (−)</SelectItem>
-                      <SelectItem value="REVENUE">Revenue (+)</SelectItem>
+                      <SelectItem value="EXPENSE">{t("accounting.direction.expense")}</SelectItem>
+                      <SelectItem value="REVENUE">{t("accounting.direction.revenue")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1 sm:col-span-2">
-                  <Label className="text-xs">Category</Label>
+                  <Label className="text-xs">{t("accounting.category")}</Label>
                   <Select
                     value={ledgerForm.category}
                     onValueChange={(v) => setLedgerForm((f) => ({ ...f, category: v }))}
@@ -472,7 +474,7 @@ export function AccountingWorkspace() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Amount</Label>
+                  <Label className="text-xs">{t("accounting.amount")}</Label>
                   <Input
                     value={ledgerForm.amount}
                     onChange={(e) => setLedgerForm((f) => ({ ...f, amount: e.target.value }))}
@@ -481,7 +483,7 @@ export function AccountingWorkspace() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Currency</Label>
+                  <Label className="text-xs">{t("accounting.currency")}</Label>
                   {isLibyaOnly ? (
                     <Input value="LYD" readOnly disabled />
                   ) : (
@@ -499,7 +501,7 @@ export function AccountingWorkspace() {
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Date</Label>
+                  <Label className="text-xs">{t("accounting.date")}</Label>
                   <Input
                     type="date"
                     value={ledgerForm.occurredAt}
@@ -508,16 +510,16 @@ export function AccountingWorkspace() {
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                  <Label className="text-xs">Description</Label>
+                  <Label className="text-xs">{t("accounting.description")}</Label>
                   <Input
                     value={ledgerForm.description}
                     onChange={(e) => setLedgerForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="What this line represents"
+                    placeholder={t("accounting.descriptionPlaceholder")}
                     required
                   />
                 </div>
                 <Button type="submit" className="sm:col-span-2 lg:col-span-3 w-full sm:w-auto">
-                  Save to ledger
+                  {t("accounting.saveLine")}
                 </Button>
               </form>
             </CardContent>
@@ -525,7 +527,7 @@ export function AccountingWorkspace() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Recent lines (period)</CardTitle>
+              <CardTitle className="text-base">{t("accounting.recentLines")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {ledger.map((row) => (
@@ -548,7 +550,7 @@ export function AccountingWorkspace() {
                   )}
                 </div>
               ))}
-              {ledger.length === 0 && <p className="text-sm text-zinc-500">No lines in this range.</p>}
+              {ledger.length === 0 && <p className="text-sm text-zinc-500">{t("accounting.noLines")}</p>}
             </CardContent>
           </Card>
         </div>

@@ -331,3 +331,35 @@ body {
 
 /* Page hero / nav surfaces */
 .theme-light .navbar-shipeh { background: #ffffff !important; border-color: #e6e7ee !important; }
+
+/* ============================================================
+   RTL adjustments — applied when <html dir="rtl"> (Arabic).
+   Most of the layout uses gap-* and flex which mirror automatically;
+   these rules cover the few hardcoded spots.
+   ============================================================ */
+html[dir="rtl"] body { font-family: "Public Sans", "Cairo", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; }
+
+/* Numeric inputs (date / numbers) stay LTR for legibility — Arabic
+   speakers expect Western digits in business contexts. */
+html[dir="rtl"] input[type="date"],
+html[dir="rtl"] input[type="datetime-local"],
+html[dir="rtl"] input[type="number"],
+html[dir="rtl"] input[type="email"],
+html[dir="rtl"] .font-mono,
+html[dir="rtl"] .tabular-nums {
+  direction: ltr;
+  text-align: right;
+}
+
+/* Tables: keep numeric columns right-aligned in RTL too. */
+html[dir="rtl"] th,
+html[dir="rtl"] td { text-align: right; }
+
+/* Safer letter spacing for Arabic on small uppercase tracking. */
+html[dir="rtl"] .uppercase,
+html[dir="rtl"] .tracking-wide,
+html[dir="rtl"] .tracking-wider,
+html[dir="rtl"] .tracking-widest {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}

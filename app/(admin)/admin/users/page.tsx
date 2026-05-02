@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/shared/Avatar";
 import { Plus, Pencil } from "lucide-react";
 import type { UserWithStats } from "@/types";
+import { useT } from "@/components/shared/I18nProvider";
 
 export default function UsersPage() {
+  const t = useT();
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,12 +33,12 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Users</h1>
-          <p className="text-zinc-400 mt-1">Manage all accounts</p>
+          <h1 className="text-3xl font-bold text-white">{t("users.title")}</h1>
+          <p className="text-zinc-400 mt-1">{t("users.subtitle")}</p>
         </div>
         <Link href="/admin/users/new">
           <Button className="gap-2">
-            <Plus className="h-4 w-4" /> New User
+            <Plus className="h-4 w-4" /> {t("users.new")}
           </Button>
         </Link>
       </div>
@@ -62,7 +64,7 @@ export default function UsersPage() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Badge variant={roleVariant(u.role)}>{u.role}</Badge>
                 <Badge variant={u.status === "ACTIVE" ? "default" : "outline"}>
-                  {u.status}
+                  {t(`users.role.${u.status}`)}
                 </Badge>
                 <Link href={`/admin/users/${u.id}`}>
                   <Button variant="ghost" size="icon">

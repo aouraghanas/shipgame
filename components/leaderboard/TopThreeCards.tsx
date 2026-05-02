@@ -1,7 +1,10 @@
+"use client";
+
 import { Avatar } from "@/components/shared/Avatar";
 import { Trophy, Medal, Award } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
 import { punishmentTextForRank, rewardTextForRank } from "@/lib/month-rewards";
+import { useT } from "@/components/shared/I18nProvider";
 
 interface Props {
   entries: LeaderboardEntry[];
@@ -19,7 +22,7 @@ interface Props {
  */
 const podiumStyles = [
   {
-    label: "1st",
+    labelKey: "leaderboard.1st",
     icon: <Trophy className="h-3.5 w-3.5" />,
     accentBar: "bg-gradient-to-r from-amber-400 to-amber-600",
     chip: "bg-amber-500 text-white",
@@ -28,7 +31,7 @@ const podiumStyles = [
     border: "border-amber-500/40",
   },
   {
-    label: "2nd",
+    labelKey: "leaderboard.2nd",
     icon: <Medal className="h-3.5 w-3.5" />,
     accentBar: "bg-gradient-to-r from-slate-300 to-slate-500",
     chip: "bg-slate-500 text-white",
@@ -37,7 +40,7 @@ const podiumStyles = [
     border: "border-slate-400/40",
   },
   {
-    label: "3rd",
+    labelKey: "leaderboard.3rd",
     icon: <Award className="h-3.5 w-3.5" />,
     accentBar: "bg-gradient-to-r from-amber-700 to-amber-900",
     chip: "bg-amber-700 text-white",
@@ -57,6 +60,7 @@ export function TopThreeCards({
   punishmentTexts,
   totalManagers,
 }: Props) {
+  const t = useT();
   const top3 = entries.slice(0, 3);
   if (top3.length === 0) return null;
 
@@ -87,7 +91,7 @@ export function TopThreeCards({
               className={`absolute -top-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-md ${style.chip}`}
             >
               {style.icon}
-              <span className="leading-none">{style.label}</span>
+              <span className="leading-none">{t(style.labelKey)}</span>
             </div>
 
             <div className="px-4 flex flex-col items-center w-full">
@@ -100,16 +104,16 @@ export function TopThreeCards({
                 <p className={`${isFirst ? "text-3xl" : "text-2xl"} font-black mt-1 ${style.score}`}>
                   {entry.totalScoreVal.toFixed(1)}
                 </p>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mt-0.5">points</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mt-0.5">{t("leaderboard.points")}</p>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2 w-full text-center">
                 <div className="rounded-lg bg-zinc-800 px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-wide text-zinc-400">Delivered</p>
+                  <p className="text-[10px] uppercase tracking-wide text-zinc-400">{t("leaderboard.delivered")}</p>
                   <p className="text-sm font-bold text-zinc-100">{entry.deliveredTotal}</p>
                 </div>
                 <div className="rounded-lg bg-zinc-800 px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-wide text-zinc-400">Stock</p>
+                  <p className="text-[10px] uppercase tracking-wide text-zinc-400">{t("leaderboard.stock")}</p>
                   <p className="text-sm font-bold text-zinc-100">{entry.stockQty}</p>
                 </div>
               </div>

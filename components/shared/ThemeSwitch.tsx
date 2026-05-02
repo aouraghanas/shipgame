@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useT } from "./I18nProvider";
 
 type ThemeMode = "dark" | "light";
 
@@ -21,6 +22,7 @@ interface Props {
 
 export function ThemeSwitch({ variant = "floating" }: Props) {
   const pathname = usePathname();
+  const t = useT();
   const [mode, setMode] = useState<ThemeMode>("dark");
   const [mounted, setMounted] = useState(false);
 
@@ -53,8 +55,8 @@ export function ThemeSwitch({ variant = "floating" }: Props) {
         setMode(nextMode);
         applyTheme(nextMode);
       }}
-      title={isLight ? "Switch to dark mode" : "Switch to light mode"}
-      aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
+      title={isLight ? t("theme.toDark") : t("theme.toLight")}
+      aria-label={isLight ? t("theme.toDark") : t("theme.toLight")}
       className={className}
     >
       {isLight ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}

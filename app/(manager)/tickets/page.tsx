@@ -20,6 +20,7 @@ import { TICKET_PRIORITIES, TICKET_RECIPIENTS, TICKET_STATUSES, TICKET_SUBJECTS 
 import { ticketRowClasses, ticketStatusBadgeClasses } from "@/lib/ticket-row-styles";
 import { cn } from "@/lib/utils";
 import { Ticket, Plus, Filter, Inbox } from "lucide-react";
+import { useT } from "@/components/shared/I18nProvider";
 
 type TicketRow = {
   id: string;
@@ -97,6 +98,7 @@ function buildSummaryQuery(params: {
 export default function TicketsPage() {
   const { data: session } = useSession();
   const role = session?.user?.role;
+  const t = useT();
   const canCreate =
     role === "MANAGER" || role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
   const sellerOptional = role === "SOURCING_AGENT" || role === "ACCOUNTANT";
@@ -305,29 +307,26 @@ export default function TicketsPage() {
       <div>
         <h1 className="text-3xl font-bold text-white flex items-center gap-3">
           <Ticket className="h-8 w-8 text-indigo-400" />
-          Support tickets
+          {t("tickets.title")}
         </h1>
-        <p className="text-zinc-400 mt-1 max-w-3xl">
-          Queue first — filter by dates, status, priority, or creator. Urgent rows are highlighted in red so they stand
-          out. Archive resolved items to keep the list calm.
-        </p>
+        <p className="text-zinc-400 mt-1 max-w-3xl">{t("tickets.subtitle")}</p>
       </div>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Inbox className="h-5 w-5 text-indigo-400" />
-          Queue
+          {t("tickets.queue")}
         </h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {[
-            { label: "Active", value: summaryLoading ? "…" : String(summary?.openPipeline ?? 0), hint: "open + progress + waiting" },
-            { label: "Open", value: summaryLoading ? "…" : String(bs.OPEN ?? 0), hint: "" },
-            { label: "In progress", value: summaryLoading ? "…" : String(bs.IN_PROGRESS ?? 0), hint: "" },
-            { label: "Waiting", value: summaryLoading ? "…" : String(bs.WAITING ?? 0), hint: "" },
-            { label: "Resolved", value: summaryLoading ? "…" : String(bs.RESOLVED ?? 0), hint: "" },
-            { label: "Archived", value: summaryLoading ? "…" : String(bs.ARCHIVED ?? 0), hint: "" },
-            { label: "Total", value: summaryLoading ? "…" : String(summary?.total ?? 0), hint: "in current scope" },
+            { label: t("tickets.stats.active"), value: summaryLoading ? "…" : String(summary?.openPipeline ?? 0), hint: t("tickets.stats.activeHint") },
+            { label: t("tickets.stats.open"), value: summaryLoading ? "…" : String(bs.OPEN ?? 0), hint: "" },
+            { label: t("tickets.stats.inProgress"), value: summaryLoading ? "…" : String(bs.IN_PROGRESS ?? 0), hint: "" },
+            { label: t("tickets.stats.waiting"), value: summaryLoading ? "…" : String(bs.WAITING ?? 0), hint: "" },
+            { label: t("tickets.stats.resolved"), value: summaryLoading ? "…" : String(bs.RESOLVED ?? 0), hint: "" },
+            { label: t("tickets.stats.archived"), value: summaryLoading ? "…" : String(bs.ARCHIVED ?? 0), hint: "" },
+            { label: t("tickets.stats.total"), value: summaryLoading ? "…" : String(summary?.total ?? 0), hint: t("tickets.stats.totalHint") },
           ].map((c) => (
             <div
               key={c.label}
@@ -344,37 +343,37 @@ export default function TicketsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-zinc-200 flex items-center gap-2">
               <Filter className="h-4 w-4 text-zinc-400" />
-              Filters
+              {t("tickets.filters")}
             </CardTitle>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pt-0">
             <div className="space-y-2">
-              <Label className="text-xs text-zinc-400">Status</Label>
+              <Label className="text-xs text-zinc-400">{t("tickets.filters.status")}</Label>
               <Select value={filterStatus || "__all__"} onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t("tickets.filters.allStatuses")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All statuses</SelectItem>
+                  <SelectItem value="__all__">{t("tickets.filters.allStatuses")}</SelectItem>
                   {TICKET_STATUSES.map((s) => (
                     <SelectItem key={s.value} value={s.value}>
-                      {s.label}
+                      {t(`status.${s.value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-zinc-400">Priority</Label>
+              <Label className="text-xs text-zinc-400">{t("tickets.filters.priority")}</Label>
               <Select value={filterPriority || "__all__"} onValueChange={(v) => setFilterPriority(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="All priorities" />
+                  <SelectValue placeholder={t("tickets.filters.allPriorities")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All priorities</SelectItem>
+                  <SelectItem value="__all__">{t("tickets.filters.allPriorities")}</SelectItem>
                   {TICKET_PRIORITIES.map((p) => (
                     <SelectItem key={p.value} value={p.value}>
-                      {p.label}
+                      {t(`priority.${p.value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -382,13 +381,13 @@ export default function TicketsPage() {
             </div>
             {canFilterByCreator ? (
               <div className="space-y-2">
-                <Label className="text-xs text-zinc-400">Created by</Label>
+                <Label className="text-xs text-zinc-400">{t("tickets.filters.creator")}</Label>
                 <Select value={filterCreatedBy || "__all__"} onValueChange={(v) => setFilterCreatedBy(v === "__all__" ? "" : v)}>
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Anyone" />
+                    <SelectValue placeholder={t("tickets.filters.anyone")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
-                    <SelectItem value="__all__">Anyone</SelectItem>
+                    <SelectItem value="__all__">{t("tickets.filters.anyone")}</SelectItem>
                     {assignees.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.name} ({u.role})
@@ -399,25 +398,25 @@ export default function TicketsPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label className="text-xs text-zinc-400">Created by</Label>
-                <p className="text-sm text-zinc-500 pt-2">Your tickets and items assigned to you.</p>
+                <Label className="text-xs text-zinc-400">{t("tickets.filters.creator")}</Label>
+                <p className="text-sm text-zinc-500 pt-2">{t("tickets.filters.scopedHint")}</p>
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-xs text-zinc-400">From date</Label>
+              <Label className="text-xs text-zinc-400">{t("tickets.filters.dateFrom")}</Label>
               <Input className="h-9" type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-zinc-400">To date</Label>
+              <Label className="text-xs text-zinc-400">{t("tickets.filters.dateTo")}</Label>
               <Input className="h-9" type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
             </div>
             <div className="flex flex-col justify-end gap-2">
               <label className="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
                 <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-                Include archived
+                {t("tickets.filters.includeArchived")}
               </label>
               <Button type="button" variant="secondary" size="sm" className="w-full sm:w-auto" onClick={clearFilters}>
-                Clear filters
+                {t("tickets.filters.clear")}
               </Button>
             </div>
           </CardContent>
@@ -435,41 +434,39 @@ export default function TicketsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {tickets.map((t) => (
-              <Link key={t.id} href={`/tickets/${t.id}`} className="block group">
+            {tickets.map((row) => (
+              <Link key={row.id} href={`/tickets/${row.id}`} className="block group">
                 <div
                   className={cn(
                     "rounded-lg px-4 py-3 transition-colors group-hover:border-zinc-600/80",
-                    ticketRowClasses(t.priority)
+                    ticketRowClasses(row.priority)
                   )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium text-zinc-100 truncate">{t.title}</p>
+                      <p className="font-medium text-zinc-100 truncate">{row.title}</p>
                       <p className="text-xs text-zinc-500 mt-1">
-                        {TICKET_SUBJECTS.find((s) => s.value === t.subject)?.label ?? t.subject} ·{" "}
-                        {TICKET_PRIORITIES.find((p) => p.value === t.priority)?.label ?? t.priority} ·{" "}
-                        {TICKET_RECIPIENTS.find((r) => r.value === t.recipient)?.label ?? t.recipient}
+                        {TICKET_SUBJECTS.find((s) => s.value === row.subject)?.label ?? row.subject} ·{" "}
+                        {t(`priority.${row.priority}`)} ·{" "}
+                        {TICKET_RECIPIENTS.find((r) => r.value === row.recipient)?.label ?? row.recipient}
                       </p>
                     </div>
-                    <span className={cn("shrink-0 text-xs font-medium rounded-full px-2 py-0.5", ticketStatusBadgeClasses(t.status))}>
-                      {TICKET_STATUSES.find((s) => s.value === t.status)?.label ?? t.status}
+                    <span className={cn("shrink-0 text-xs font-medium rounded-full px-2 py-0.5", ticketStatusBadgeClasses(row.status))}>
+                      {t(`status.${row.status}`)}
                     </span>
                   </div>
                   <p className="text-xs text-zinc-500 mt-2">
-                    Seller: {t.seller?.name ?? t.sellerNameText ?? "—"} · By {t.createdBy.name}
-                    {t.assignee ? ` · Assigned ${t.assignee.name}` : ""} · {t._count.comments} comments · {t._count.attachments}{" "}
-                    files · {new Date(t.createdAt).toLocaleDateString()}
+                    Seller: {row.seller?.name ?? row.sellerNameText ?? "—"} · By {row.createdBy.name}
+                    {row.assignee ? ` · Assigned ${row.assignee.name}` : ""} · {row._count.comments} comments · {row._count.attachments}{" "}
+                    files · {new Date(row.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </Link>
             ))}
             {tickets.length === 0 && !loadError && (
               <p className="text-zinc-500 text-sm">
-                No tickets in this view.{" "}
-                {canCreate
-                  ? "Adjust filters or create a ticket below."
-                  : "Adjust filters or ask an account manager to open a ticket."}
+                {t("tickets.empty")}{" "}
+                {canCreate ? t("tickets.emptyCanCreate") : t("tickets.emptyReadOnly")}
               </p>
             )}
           </div>
@@ -481,7 +478,7 @@ export default function TicketsPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Plus className="h-5 w-5 text-indigo-400" />
-              New ticket
+              {t("tickets.new")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -533,7 +530,7 @@ export default function TicketsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Priority</Label>
+                  <Label>{t("tickets.filters.priority")}</Label>
                   <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
                     <SelectTrigger>
                       <SelectValue />
@@ -541,7 +538,7 @@ export default function TicketsPage() {
                     <SelectContent>
                       {TICKET_PRIORITIES.map((p) => (
                         <SelectItem key={p.value} value={p.value}>
-                          {p.label}
+                          {t(`priority.${p.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -601,7 +598,7 @@ export default function TicketsPage() {
                 <Input type="datetime-local" value={form.deadlineAt} onChange={(e) => setForm((f) => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
               {msg && <p className={`text-sm ${msgIsError ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>}
-              <Button type="submit">Submit ticket</Button>
+              <Button type="submit">{t("common.submit")}</Button>
             </form>
           </CardContent>
         </Card>

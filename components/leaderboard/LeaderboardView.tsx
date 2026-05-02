@@ -7,6 +7,7 @@ import { formatMonthKey } from "@/lib/utils";
 import type { LeaderboardData, LeaderboardEntry } from "@/types";
 import { punishmentTextForRank, rewardTextForRank } from "@/lib/month-rewards";
 import { Trophy, Flame, ShieldAlert } from "lucide-react";
+import { useT } from "@/components/shared/I18nProvider";
 
 interface Props {
   initialData?: LeaderboardData;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 function ClassicBoard({ data }: { data: LeaderboardData }) {
+  const t = useT();
   const winnerPlaces = data.winnerPlaces ?? 3;
   const loserPlaces = data.loserPlaces ?? 1;
   const rewardTexts = data.rewardTexts ?? [data.rewardText, null, null];
@@ -28,7 +30,7 @@ function ClassicBoard({ data }: { data: LeaderboardData }) {
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white">{formatMonthKey(data.monthKey)}</h2>
         <p className="text-zinc-400 text-sm mt-1">
-          {data.entries.length} manager{data.entries.length !== 1 ? "s" : ""} competing
+          {t("leaderboard.competing", { n: data.entries.length })}
         </p>
       </div>
 
@@ -57,6 +59,7 @@ function ClassicBoard({ data }: { data: LeaderboardData }) {
 }
 
 function CompetitiveBoard({ data }: { data: LeaderboardData }) {
+  const t = useT();
   const winnerPlaces = data.winnerPlaces ?? 3;
   const loserPlaces = data.loserPlaces ?? 1;
   const rewardTexts = data.rewardTexts ?? [data.rewardText, null, null];
@@ -79,7 +82,7 @@ function CompetitiveBoard({ data }: { data: LeaderboardData }) {
           <div>
             <p className="text-xs uppercase tracking-widest text-indigo-300">Competition Mode</p>
             <h2 className="text-2xl font-black text-white">Office Battleboard · {formatMonthKey(data.monthKey)}</h2>
-            <p className="text-zinc-400 text-sm mt-1">{data.entries.length} managers competing</p>
+            <p className="text-zinc-400 text-sm mt-1">{t("leaderboard.competing", { n: data.entries.length })}</p>
           </div>
           <div className="text-right text-sm text-zinc-300">
             <p className="font-semibold text-amber-300">Top {winnerPlaces} reward zone</p>
@@ -183,8 +186,13 @@ export function LeaderboardView({
   }
 
   if (!data || data.entries.length === 0) {
-    return <div className="text-center py-20 text-zinc-500">No rankings yet for this month.</div>;
+    return <LeaderboardEmpty />;
   }
 
   return data.leaderboardDesign === "ARENA" ? <CompetitiveBoard data={data} /> : <ClassicBoard data={data} />;
+}
+
+function LeaderboardEmpty() {
+  const t = useT();
+  return <div className="text-center py-20 text-zinc-500">{t("leaderboard.empty")}</div>;
 }

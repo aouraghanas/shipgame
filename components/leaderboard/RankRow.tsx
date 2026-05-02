@@ -1,5 +1,8 @@
+"use client";
+
 import { Avatar } from "@/components/shared/Avatar";
 import type { LeaderboardEntry } from "@/types";
+import { useT } from "@/components/shared/I18nProvider";
 
 interface Props {
   entry: LeaderboardEntry;
@@ -7,6 +10,7 @@ interface Props {
 }
 
 export function RankRow({ entry, punishmentText }: Props) {
+  const t = useT();
   const isDanger = Boolean(punishmentText);
   return (
     <div
@@ -36,15 +40,15 @@ export function RankRow({ entry, punishmentText }: Props) {
 
       <div className="hidden sm:flex items-center gap-6 text-center text-sm flex-shrink-0">
         <div>
-          <p className="text-zinc-400 text-xs">Delivered</p>
+          <p className="text-zinc-400 text-xs">{t("leaderboard.delivered")}</p>
           <p className="font-semibold text-zinc-100">{entry.deliveredTotal}</p>
         </div>
         <div>
-          <p className="text-zinc-400 text-xs">Stock qty</p>
+          <p className="text-zinc-400 text-xs">{t("leaderboard.stockQty")}</p>
           <p className="font-semibold text-zinc-100">{entry.stockQty}</p>
         </div>
         <div>
-          <p className="text-zinc-400 text-xs">Score</p>
+          <p className="text-zinc-400 text-xs">{t("leaderboard.score")}</p>
           <p className="font-bold text-brand">{entry.totalScoreVal.toFixed(1)}</p>
         </div>
       </div>
