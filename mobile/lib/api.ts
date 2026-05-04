@@ -16,6 +16,8 @@ import { getAuthToken } from "./storage";
  *      Mac's LAN IP (NOT localhost — that would mean the phone itself).
  *   3. Last resort: localhost (works on iOS simulator / Android emulator only).
  */
+const IPV4 = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+
 function baseUrl(): string {
   const fromExtra = (Constants?.expoConfig?.extra as { apiBaseUrl?: string } | undefined)
     ?.apiBaseUrl;
@@ -32,7 +34,10 @@ function baseUrl(): string {
 
   if (hostUri) {
     const host = String(hostUri).split(":")[0];
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
+    // Only accept a numeric LAN IP. If the host is a tunnel domain
+    // (e.g. *.exp.direct), the Next.js port 3000 is NOT exposed through it,
+    // so we MUST require an explicit EXPO_PUBLIC_API_BASE_URL instead.
+    if (host && IPV4.test(host) && host !== "127.0.0.1") {
       return `http://${host}:3000`;
     }
   }
@@ -61,11 +66,18 @@ export type FetchOptions = {
   noAuth?: boolean;
 };
 
+let loggedBaseUrl = false;
+
 export async function api<T = unknown>(
   path: string,
   opts: FetchOptions = {}
 ): Promise<T> {
-  const url = path.startsWith("http") ? path : `${baseUrl()}${path}`;
+  const base = baseUrl();
+  if (__DEV__ && !loggedBaseUrl) {
+    loggedBaseUrl = true;
+    console.log(`[api] using baseUrl=${base}`);
+  }
+  const url = path.startsWith("http") ? path : `${base}${path}`;
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
