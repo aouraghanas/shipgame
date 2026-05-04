@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import type { SupportTicketStatus } from "@prisma/client";
 import { canEditTicketMeta, canManageTicketWorkflow, canUseTicketsApp, canViewTicket } from "@/lib/tickets-access";
 import { logAudit } from "@/lib/audit";
+import { getSessionFromRequest } from "@/lib/mobile-auth";
 
 const patchSchema = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "ARCHIVED"]).optional(),
@@ -31,8 +30,8 @@ async function loadTicket(id: string) {
   });
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getSessionFromRequest(req);
   if (!session || !canUseTicketsApp(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -44,7 +43,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canUseTicketsApp(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

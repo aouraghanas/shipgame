@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { SupportTicketPriority, SupportTicketRecipient, SupportTicketSubject } from "@prisma/client";
 import { canCreateTicket, canUseTicketsApp } from "@/lib/tickets-access";
 import { buildTicketListWhere, type TicketListQuery } from "@/lib/tickets-list-where";
 import { logAudit } from "@/lib/audit";
+import { getSessionFromRequest } from "@/lib/mobile-auth";
 
 const SUBJECTS = [
   "SOURCING",
@@ -51,7 +50,7 @@ const postSchema = z
   });
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canUseTicketsApp(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -85,7 +84,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canCreateTicket(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

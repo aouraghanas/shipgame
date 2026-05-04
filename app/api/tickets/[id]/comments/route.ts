@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { canCommentOnTicket, canUseTicketsApp } from "@/lib/tickets-access";
 import { logAudit } from "@/lib/audit";
+import { getSessionFromRequest } from "@/lib/mobile-auth";
 
 const postSchema = z.object({
   body: z.string().min(1).max(10000),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canUseTicketsApp(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

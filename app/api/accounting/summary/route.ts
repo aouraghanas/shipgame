@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { canAccessAccounting, currencyScopeFor } from "@/lib/accounting-access";
 import { buildAccountingSummary } from "@/lib/accounting-summary";
+import { getSessionFromRequest } from "@/lib/mobile-auth";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canAccessAccounting(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

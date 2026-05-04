@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canUseTicketsApp } from "@/lib/tickets-access";
 import { buildTicketListWhere, type TicketListQuery } from "@/lib/tickets-list-where";
+import { getSessionFromRequest } from "@/lib/mobile-auth";
 
 const STATUSES = ["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "ARCHIVED"] as const;
 
 /** Count tickets by status for the current user's visibility (ignores status/priority filters). */
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSessionFromRequest(req);
   if (!session || !canUseTicketsApp(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
