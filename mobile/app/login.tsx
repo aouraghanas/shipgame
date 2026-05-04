@@ -41,7 +41,7 @@ export default function LoginScreen() {
     setErr(null);
     try {
       const u = await signIn(email, password);
-      router.replace(homeRouteFor(u.role));
+      router.replace(homeRouteFor(u.role) as never);
     } catch (e) {
       if (e instanceof ApiError) setErr(e.message);
       else setErr(t("login.invalid"));

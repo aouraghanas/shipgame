@@ -6,12 +6,41 @@
  */
 
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 import { getAuthToken } from "./storage";
 
+/**
+ * Resolve the API base URL with this priority:
+ *   1. Explicit override via EXPO_PUBLIC_API_BASE_URL (set in env or app.config extra)
+ *   2. In Expo Go / dev client: derive from Metro's host so the phone hits the
+ *      Mac's LAN IP (NOT localhost — that would mean the phone itself).
+ *   3. Last resort: localhost (works on iOS simulator / Android emulator only).
+ */
 function baseUrl(): string {
-  const fromExtra =
-    (Constants?.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl;
-  return fromExtra ?? "http://localhost:3000";
+  const fromExtra = (Constants?.expoConfig?.extra as { apiBaseUrl?: string } | undefined)
+    ?.apiBaseUrl;
+  if (fromExtra && fromExtra !== "http://localhost:3000") {
+    return fromExtra;
+  }
+
+  const hostUri =
+    Constants?.expoConfig?.hostUri ??
+    (Constants as unknown as { expoGoConfig?: { debuggerHost?: string } })?.expoGoConfig
+      ?.debuggerHost ??
+    (Constants as unknown as { manifest?: { debuggerHost?: string } })?.manifest
+      ?.debuggerHost;
+
+  if (hostUri) {
+    const host = String(hostUri).split(":")[0];
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return `http://${host}:3000`;
+    }
+  }
+
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:3000";
+  }
+  return "http://localhost:3000";
 }
 
 export class ApiError extends Error {
@@ -56,7 +85,7 @@ export async function api<T = unknown>(
       signal: opts.signal,
     });
   } catch (e) {
-    throw new ApiError(0, "Network error", e);
+    throw new ApiError(0, `Network error reaching ${url}`, e);
   }
 
   const text = await res.text();

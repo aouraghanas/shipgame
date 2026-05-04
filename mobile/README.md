@@ -28,24 +28,35 @@ mobile/
 
 ## 1. Run it on your phone in 60 seconds (no Apple / Google account needed)
 
+You need the **web backend running on your Mac** for login to work, then
+the mobile app on your phone:
+
 ```bash
-# from repo root
+# Terminal 1 — from repo root, start the Next.js backend (binds to LAN)
+npm run dev
+
+# Terminal 2 — start the mobile app
 cd mobile
 npx expo start --tunnel
 ```
 
 1. Open the **Expo Go** app on your phone (free on App Store / Play Store).
 2. Scan the QR code printed in your terminal.
-3. The Shipeh app loads instantly. You're done.
+3. The Shipeh app loads. Log in with the same email/password you use on web.
 
+> The mobile app auto-detects your Mac's LAN IP from Metro and reaches the
+> web backend at `http://<mac-ip>:3000` — no env var needed when the phone
+> and Mac are on the same Wi-Fi.
+>
 > The first launch with `--tunnel` takes ~20s. Subsequent launches are
 > faster. If your phone and laptop are on the same Wi-Fi, you can drop
 > `--tunnel` for an even faster connection.
 
 ### Point it at your live backend
 
-By default the app talks to `http://localhost:3000`. To use the deployed
-Shipeh backend, set the env var **before** `expo start`:
+By default the app talks to your Mac's LAN IP on port 3000 (auto-detected
+from Metro). To use the deployed Shipeh backend instead, set the env var
+**before** `expo start`:
 
 ```bash
 EXPO_PUBLIC_API_BASE_URL="https://your-shipeh.netlify.app" npx expo start --tunnel
