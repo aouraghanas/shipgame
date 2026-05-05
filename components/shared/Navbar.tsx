@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ThemeSwitch } from "./ThemeSwitch";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { NotificationsBell } from "./NotificationsBell";
 import { useT } from "./I18nProvider";
 
 type NavLink = { href: string; icon: LucideIcon; labelKey: string };
@@ -129,6 +130,7 @@ export function Navbar() {
           {session?.user?.name && (
             <span className="text-xs text-zinc-500 hidden sm:block">{session.user.name}</span>
           )}
+          <NotificationsBell />
           <LanguageSwitch variant="inline" />
           <ThemeSwitch variant="inline" />
           <button

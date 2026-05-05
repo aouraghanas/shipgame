@@ -5,6 +5,7 @@ import type { SupportTicketStatus } from "@prisma/client";
 import { canEditTicketMeta, canManageTicketWorkflow, canUseTicketsApp, canViewTicket } from "@/lib/tickets-access";
 import { logAudit } from "@/lib/audit";
 import { getSessionFromRequest } from "@/lib/mobile-auth";
+import { notify, notifyMany, ticketAudienceUserIds } from "@/lib/user-notifications";
 
 const patchSchema = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "ARCHIVED"]).optional(),
@@ -104,6 +105,58 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
 
   await logAudit(session.user.id, session.user.name, "supportTicket.patch", `Ticket ${params.id}`);
+
+  // Notification fan-out for the changes that just happened.
+  void (async () => {
+    try {
+      const statusChanged = d.status !== undefined && d.status !== ticket.status;
+      const assigneeChanged =
+        d.assigneeId !== undefined && d.assigneeId !== ticket.assigneeId;
+
+      if (statusChanged) {
+        const targets = await ticketAudienceUserIds(next, session.user.id);
+        if (targets.length > 0) {
+          await notifyMany(targets, {
+            kind: "TICKET_STATUS_CHANGED",
+            title: `Ticket “${next.title}” → ${next.status.replace("_", " ").toLowerCase()}`,
+            body: `Updated by ${session.user.name}`,
+            link: `/tickets/${next.id}`,
+            ticketId: next.id,
+          });
+        }
+      }
+
+      if (assigneeChanged) {
+        if (next.assigneeId && next.assigneeId !== session.user.id) {
+          await notify({
+            userId: next.assigneeId,
+            kind: "TICKET_ASSIGNED",
+            title: `Ticket assigned to you: ${next.title}`,
+            body: `Assigned by ${session.user.name}`,
+            link: `/tickets/${next.id}`,
+            ticketId: next.id,
+          });
+        }
+        // Old assignee is being unassigned (or replaced) — let them know.
+        if (
+          ticket.assigneeId &&
+          ticket.assigneeId !== next.assigneeId &&
+          ticket.assigneeId !== session.user.id
+        ) {
+          await notify({
+            userId: ticket.assigneeId,
+            kind: "TICKET_UNASSIGNED",
+            title: `You're no longer assigned to: ${next.title}`,
+            body: `Reassigned by ${session.user.name}`,
+            link: `/tickets/${next.id}`,
+            ticketId: next.id,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[notify] ticket.patch fan-out failed", e);
+    }
+  })();
 
   return NextResponse.json(next);
 }

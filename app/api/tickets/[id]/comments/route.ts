@@ -4,6 +4,7 @@ import { z } from "zod";
 import { canCommentOnTicket, canUseTicketsApp } from "@/lib/tickets-access";
 import { logAudit } from "@/lib/audit";
 import { getSessionFromRequest } from "@/lib/mobile-auth";
+import { notifyMany, preview, ticketAudienceUserIds } from "@/lib/user-notifications";
 
 const postSchema = z.object({
   body: z.string().min(1).max(10000),
@@ -37,6 +38,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   });
 
   await logAudit(session.user.id, session.user.name, "supportTicket.comment", `Ticket ${params.id}`);
+
+  // Notify everyone involved in this ticket — except the commenter.
+  void (async () => {
+    try {
+      const targets = await ticketAudienceUserIds(ticket, session.user.id);
+      if (targets.length > 0) {
+        await notifyMany(targets, {
+          kind: "TICKET_COMMENT",
+          title: `${session.user.name} commented on “${ticket.title}”`,
+          body: preview(parsed.data.body),
+          link: `/tickets/${ticket.id}`,
+          ticketId: ticket.id,
+        });
+      }
+    } catch (e) {
+      console.error("[notify] comment fan-out failed", e);
+    }
+  })();
 
   return NextResponse.json(row, { status: 201 });
 }

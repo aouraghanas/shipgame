@@ -170,6 +170,12 @@ const en: Dict = {
   "users.new": "New User",
   "users.role.ACTIVE": "ACTIVE",
   "users.role.INACTIVE": "INACTIVE",
+
+  // notifications inbox (bell)
+  "notif.title": "Notifications",
+  "notif.bellAria": "Open notifications",
+  "notif.markAllRead": "Mark all read",
+  "notif.empty": "You're all caught up.",
 };
 
 const ar: Dict = {
@@ -320,6 +326,11 @@ const ar: Dict = {
   "users.new": "مستخدم جديد",
   "users.role.ACTIVE": "نشط",
   "users.role.INACTIVE": "غير نشط",
+
+  "notif.title": "الإشعارات",
+  "notif.bellAria": "فتح الإشعارات",
+  "notif.markAllRead": "تعليم الكل كمقروء",
+  "notif.empty": "لا توجد إشعارات جديدة.",
 };
 
 export const dictionaries: Record<Locale, Dict> = { en, ar };

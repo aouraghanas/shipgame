@@ -6,6 +6,12 @@ import { canCreateTicket, canUseTicketsApp } from "@/lib/tickets-access";
 import { buildTicketListWhere, type TicketListQuery } from "@/lib/tickets-list-where";
 import { logAudit } from "@/lib/audit";
 import { getSessionFromRequest } from "@/lib/mobile-auth";
+import {
+  adminUserIds,
+  notifyMany,
+  preview,
+  sourcingTeamUserIds,
+} from "@/lib/user-notifications";
 
 const SUBJECTS = [
   "SOURCING",
@@ -140,6 +146,37 @@ export async function POST(req: NextRequest) {
     "supportTicket.create",
     `Ticket #${ticket.id.slice(0, 8)} — ${ticket.subject} / ${ticket.priority}`
   );
+
+  // Fan out a notification to whoever this ticket is addressed to.
+  // Never blocks the response — failures are logged and swallowed.
+  void (async () => {
+    try {
+      const recipients = new Set<string>();
+      if (ticket.recipient === "SPECIFIC_USER" && ticket.assigneeId) {
+        recipients.add(ticket.assigneeId);
+      } else if (ticket.recipient === "ALL_ADMINS") {
+        for (const id of await adminUserIds()) recipients.add(id);
+      } else if (ticket.recipient === "SOURCING_TEAM") {
+        for (const id of await sourcingTeamUserIds()) recipients.add(id);
+      }
+      recipients.delete(session.user.id);
+
+      if (recipients.size > 0) {
+        const isAssigned = ticket.recipient === "SPECIFIC_USER";
+        await notifyMany(Array.from(recipients), {
+          kind: isAssigned ? "TICKET_ASSIGNED" : "TICKET_FOR_YOU",
+          title: isAssigned
+            ? `New ticket assigned to you: ${ticket.title}`
+            : `New ticket: ${ticket.title}`,
+          body: preview(ticket.description),
+          link: `/tickets/${ticket.id}`,
+          ticketId: ticket.id,
+        });
+      }
+    } catch (e) {
+      console.error("[notify] ticket.create fan-out failed", e);
+    }
+  })();
 
   return NextResponse.json(ticket, { status: 201 });
 }

@@ -88,6 +88,7 @@ model User {
   ticketsAssigned         SupportTicket[]          @relation("TicketAssignee")
   ticketAttachments       SupportTicketAttachment[] @relation("TicketAttachmentUploader")
   ticketComments          SupportTicketComment[]   @relation("TicketCommentAuthor")
+  userNotifications       UserNotification[]       @relation("UserNotifications")
 }
 
 // ——— Shipeh accounting (manual entry MVP; API sync later) ———
@@ -544,4 +545,31 @@ model SupportTicketComment {
   user   User          @relation("TicketCommentAuthor", fields: [userId], references: [id])
 
   @@index([ticketId])
+}
+
+// ——— Per-user inbox notifications (ticket events, etc.) ———
+
+enum UserNotificationKind {
+  TICKET_ASSIGNED
+  TICKET_FOR_YOU
+  TICKET_COMMENT
+  TICKET_STATUS_CHANGED
+  TICKET_UNASSIGNED
+  GENERIC
+}
+
+model UserNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  kind      UserNotificationKind  @default(GENERIC)
+  title     String
+  body      String?               @db.Text
+  link      String?
+  ticketId  String?
+  readAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt(sort: Desc)])
 }
