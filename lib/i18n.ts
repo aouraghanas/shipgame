@@ -114,6 +114,10 @@ const en: Dict = {
   "accounting.description": "Description",
   "accounting.descriptionPlaceholder": "What this line represents",
   "accounting.saveLine": "Save to ledger",
+  "accounting.editLine": "Edit ledger line",
+  "accounting.saveChanges": "Save changes",
+  "accounting.lineUpdated": "Ledger line updated.",
+  "accounting.updateFailed": "Could not update ledger line.",
 
   // tickets
   "tickets.title": "Support tickets",
@@ -263,6 +267,10 @@ const ar: Dict = {
   "accounting.description": "الوصف",
   "accounting.descriptionPlaceholder": "ما يمثّله هذا البند",
   "accounting.saveLine": "حفظ في الدفتر",
+  "accounting.editLine": "تعديل بند الدفتر",
+  "accounting.saveChanges": "حفظ التغييرات",
+  "accounting.lineUpdated": "تم تحديث البند.",
+  "accounting.updateFailed": "تعذر تحديث البند.",
 
   "tickets.title": "تذاكر الدعم",
   "tickets.subtitle":

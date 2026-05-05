@@ -18,7 +18,7 @@ import {
   ACCOUNTING_CATEGORY_LABELS,
 } from "@/lib/accounting-constants";
 import { dec, shippingMarginLydTotal, percentOfAmount, leadFeeTotalUsd } from "@/lib/accounting-calcs";
-import { Calculator, Landmark, Sparkles, Trash2 } from "lucide-react";
+import { Calculator, Landmark, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
 
 type CityRow = {
@@ -228,6 +228,60 @@ export function AccountingWorkspace() {
     const r = await fetch(`/api/accounting/ledger/${id}`, { method: "DELETE" });
     setMsg(r.ok ? "Ledger line deleted." : "Delete failed.");
     void loadSummary();
+  }
+
+  // Admin-only inline edit of an existing ledger line.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{
+    direction: string;
+    category: string;
+    amount: string;
+    currency: string;
+    occurredAt: string;
+    description: string;
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+
+  function startEditLedger(row: LedgerRow) {
+    setEditingId(row.id);
+    setEditForm({
+      direction: row.direction,
+      category: row.category,
+      amount: row.amount,
+      currency: row.currency,
+      occurredAt: new Date(row.occurredAt).toISOString().slice(0, 10),
+      description: row.description,
+    });
+  }
+
+  function cancelEditLedger() {
+    setEditingId(null);
+    setEditForm(null);
+  }
+
+  async function saveEditLedger(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId || !editForm) return;
+    setEditSaving(true);
+    try {
+      const r = await fetch(`/api/accounting/ledger/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editForm,
+          occurredAt: new Date(editForm.occurredAt + "T12:00:00").toISOString(),
+        }),
+      });
+      if (r.ok) {
+        setMsg(t("accounting.lineUpdated"));
+        cancelEditLedger();
+        void loadSummary();
+      } else {
+        setMsg(t("accounting.updateFailed"));
+      }
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   const [ledgerForm, setLedgerForm] = useState({
@@ -530,26 +584,168 @@ export function AccountingWorkspace() {
               <CardTitle className="text-base">{t("accounting.recentLines")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {ledger.map((row) => (
-                <div
-                  key={row.id}
-                  className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm"
-                >
-                  <div>
-                    <p className="text-zinc-200 font-medium">{row.description}</p>
-                    <p className="text-xs text-zinc-500">
-                      {row.direction} · {ACCOUNTING_CATEGORY_LABELS[row.category as keyof typeof ACCOUNTING_CATEGORY_LABELS] ?? row.category} ·{" "}
-                      {row.amount} {row.currency} · {new Date(row.occurredAt).toLocaleDateString()} ·{" "}
-                      {row.createdBy.name}
-                    </p>
+              {ledger.map((row) => {
+                const isEditing = isAdmin && editingId === row.id && editForm !== null;
+                if (isEditing && editForm) {
+                  return (
+                    <form
+                      key={row.id}
+                      onSubmit={saveEditLedger}
+                      className="rounded-lg border border-brand/40 bg-zinc-900/80 px-3 py-3 text-sm"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                          {t("accounting.editLine")}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={cancelEditLedger}
+                          aria-label={t("common.cancel")}
+                        >
+                          <X className="h-4 w-4 text-zinc-400" />
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("accounting.direction")}</Label>
+                          <Select
+                            value={editForm.direction}
+                            onValueChange={(v) =>
+                              setEditForm((f) => (f ? { ...f, direction: v } : f))
+                            }
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="EXPENSE">{t("accounting.direction.expense")}</SelectItem>
+                              <SelectItem value="REVENUE">{t("accounting.direction.revenue")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <Label className="text-xs">{t("accounting.category")}</Label>
+                          <Select
+                            value={editForm.category}
+                            onValueChange={(v) =>
+                              setEditForm((f) => (f ? { ...f, category: v } : f))
+                            }
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent className="max-h-72">
+                              {ACCOUNTING_CATEGORIES.map((c) => (
+                                <SelectItem key={c} value={c}>
+                                  {ACCOUNTING_CATEGORY_LABELS[c]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("accounting.amount")}</Label>
+                          <Input
+                            value={editForm.amount}
+                            onChange={(e) =>
+                              setEditForm((f) => (f ? { ...f, amount: e.target.value } : f))
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("accounting.currency")}</Label>
+                          <Select
+                            value={editForm.currency}
+                            onValueChange={(v) =>
+                              setEditForm((f) => (f ? { ...f, currency: v } : f))
+                            }
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="LYD">LYD</SelectItem>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="MAD">MAD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">{t("accounting.date")}</Label>
+                          <Input
+                            type="date"
+                            value={editForm.occurredAt}
+                            onChange={(e) =>
+                              setEditForm((f) => (f ? { ...f, occurredAt: e.target.value } : f))
+                            }
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                          <Label className="text-xs">{t("accounting.description")}</Label>
+                          <Input
+                            value={editForm.description}
+                            onChange={(e) =>
+                              setEditForm((f) => (f ? { ...f, description: e.target.value } : f))
+                            }
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="submit" size="sm" disabled={editSaving}>
+                          {editSaving ? t("common.saving") : t("accounting.saveChanges")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={cancelEditLedger}
+                          disabled={editSaving}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                      </div>
+                    </form>
+                  );
+                }
+                return (
+                  <div
+                    key={row.id}
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm"
+                  >
+                    <div>
+                      <p className="text-zinc-200 font-medium">{row.description}</p>
+                      <p className="text-xs text-zinc-500">
+                        {row.direction} · {ACCOUNTING_CATEGORY_LABELS[row.category as keyof typeof ACCOUNTING_CATEGORY_LABELS] ?? row.category} ·{" "}
+                        {row.amount} {row.currency} · {new Date(row.occurredAt).toLocaleDateString()} ·{" "}
+                        {row.createdBy.name}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => startEditLedger(row)}
+                          aria-label={t("common.edit")}
+                          title={t("common.edit")}
+                        >
+                          <Pencil className="h-4 w-4 text-zinc-300" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void deleteLedger(row.id)}
+                          aria-label={t("common.delete")}
+                          title={t("common.delete")}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-400" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => void deleteLedger(row.id)}>
-                      <Trash2 className="h-4 w-4 text-red-400" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {ledger.length === 0 && <p className="text-sm text-zinc-500">{t("accounting.noLines")}</p>}
             </CardContent>
           </Card>
