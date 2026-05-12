@@ -60,7 +60,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     apiBaseUrl:
       process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3000",
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? undefined,
+      projectId:
+        process.env.EXPO_PUBLIC_EAS_PROJECT_ID ??
+        "71963f88-dbb0-49c0-95cf-b43c01438604",
     },
   },
   experiments: {
