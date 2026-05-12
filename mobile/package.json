@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:apk": "npx eas-cli@latest build --profile preview --platform android"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
