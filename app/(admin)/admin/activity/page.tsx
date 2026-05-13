@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import type { UserWithStats } from "@/types";
 
 type AuditEntry = {
@@ -71,6 +71,8 @@ function getWeekAgo() {
   return d.toISOString().split("T")[0];
 }
 
+const PAGE_SIZE = 100;
+
 export default function ActivityPage() {
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [users, setUsers] = useState<UserWithStats[]>([]);
@@ -79,15 +81,23 @@ export default function ActivityPage() {
   const [toDate, setToDate] = useState(getToday);
   const [filterUser, setFilterUser] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     fetch("/api/users").then((r) => r.json()).then(setUsers);
   }, []);
 
+  // Reset to page 1 whenever filters change.
+  useEffect(() => {
+    setPage(1);
+  }, [fromDate, toDate, filterUser]);
+
   useEffect(() => {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate, toDate, filterUser]);
+  }, [fromDate, toDate, filterUser, page]);
 
   async function fetchLogs() {
     setLoading(true);
@@ -95,10 +105,15 @@ export default function ActivityPage() {
     if (fromDate) params.set("from", fromDate);
     if (toDate) params.set("to", toDate);
     if (filterUser && filterUser !== "all") params.set("userId", filterUser);
+    params.set("page", String(page));
+    params.set("pageSize", String(PAGE_SIZE));
 
     const res = await fetch(`/api/audit-log?${params}`);
     if (res.ok) {
-      setLogs(await res.json());
+      const data = await res.json();
+      setLogs(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setTotal(data.total ?? 0);
     }
     setLoading(false);
   }
@@ -203,7 +218,12 @@ export default function ActivityPage() {
       ) : (
         <div className="space-y-6">
           <p className="text-sm text-zinc-500">
-            {filtered.length} event{filtered.length !== 1 ? "s" : ""} found
+            {total > 0
+              ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${(page - 1) * PAGE_SIZE + filtered.length} of ${total} event${total !== 1 ? "s" : ""}`
+              : `${filtered.length} event${filtered.length !== 1 ? "s" : ""} found`}
+            {searchQuery && filtered.length !== logs.length && (
+              <span className="text-zinc-600"> · {filtered.length} match this search on the current page</span>
+            )}
           </p>
           {Object.entries(grouped).map(([dateKey, entries]) => (
             <div key={dateKey}>
@@ -249,8 +269,107 @@ export default function ActivityPage() {
               </div>
             </div>
           ))}
+
+          {totalPages > 1 && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={(p) => {
+                setPage(p);
+                if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  // Compact window of page numbers around the current page.
+  const windowSize = 2;
+  const pages: number[] = [];
+  for (let i = Math.max(1, page - windowSize); i <= Math.min(totalPages, page + windowSize); i++) {
+    pages.push(i);
+  }
+  const showFirst = pages[0] > 1;
+  const showLast = pages[pages.length - 1] < totalPages;
+
+  return (
+    <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800">
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        className="gap-1"
+      >
+        <ChevronLeft className="h-4 w-4" /> Prev
+      </Button>
+
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {showFirst && (
+          <>
+            <PageBtn n={1} current={page} onChange={onChange} />
+            {pages[0] > 2 && <span className="px-1 text-zinc-600">…</span>}
+          </>
+        )}
+        {pages.map((n) => (
+          <PageBtn key={n} n={n} current={page} onChange={onChange} />
+        ))}
+        {showLast && (
+          <>
+            {pages[pages.length - 1] < totalPages - 1 && <span className="px-1 text-zinc-600">…</span>}
+            <PageBtn n={totalPages} current={page} onChange={onChange} />
+          </>
+        )}
+      </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className="gap-1"
+      >
+        Next <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function PageBtn({
+  n,
+  current,
+  onChange,
+}: {
+  n: number;
+  current: number;
+  onChange: (p: number) => void;
+}) {
+  const active = n === current;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(n)}
+      className={`h-8 min-w-8 px-2.5 rounded-md text-xs font-medium transition-colors ${
+        active
+          ? "brand-keep bg-brand text-white"
+          : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+      }`}
+    >
+      {n}
+    </button>
   );
 }

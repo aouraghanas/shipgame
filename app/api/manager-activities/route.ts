@@ -19,6 +19,12 @@ export async function GET(req: NextRequest) {
   const managerId = searchParams.get("managerId");
   const sellerId = searchParams.get("sellerId");
   const keyword = searchParams.get("keyword");
+  const paginated = searchParams.get("paginated") === "1" || !!searchParams.get("page");
+  const page = Math.max(1, Number(searchParams.get("page") || "1"));
+  const pageSize = Math.min(
+    200,
+    Math.max(1, Number(searchParams.get("pageSize") || "100"))
+  );
 
   const where: Prisma.ManagerActivityWhereInput = {};
 
@@ -42,6 +48,32 @@ export async function GET(req: NextRequest) {
     where.description = { contains: keyword, mode: "insensitive" };
   }
 
+  if (paginated) {
+    const [items, total] = await Promise.all([
+      prisma.managerActivity.findMany({
+        where,
+        include: {
+          manager: { select: { id: true, name: true, avatarUrl: true } },
+          seller: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      prisma.managerActivity.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
+  }
+
+  // Legacy bare-array response (used by /admin/reports for now) — keep so we
+  // don't break callers that don't opt into pagination yet.
   const activities = await prisma.managerActivity.findMany({
     where,
     include: {

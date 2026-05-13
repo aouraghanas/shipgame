@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
 import { cn } from "@/lib/utils";
-import { Paperclip, X, Plus, User, Clock } from "lucide-react";
+import { Paperclip, X, Plus, User, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 
 type UploadedFile = { url: string; name: string; type: string };
 type Activity = {
@@ -45,6 +45,8 @@ const CATEGORY_BADGE_CLASSES: Record<string, string> = {
   OTHER: "border-zinc-600 text-zinc-400",
 };
 
+const ACTIVITY_PAGE_SIZE = 50;
+
 export default function ActivityPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -60,13 +62,34 @@ export default function ActivityPage() {
   const [fileUploadError, setFileUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   useEffect(() => {
     fetch("/api/sellers").then((r) => r.json()).then(setSellers);
-    fetch("/api/manager-activities")
-      .then((r) => r.json())
-      .then(setActivities)
-      .finally(() => setLoading(false));
   }, []);
+
+  async function loadActivities(targetPage: number) {
+    setLoading(true);
+    const params = new URLSearchParams({
+      paginated: "1",
+      page: String(targetPage),
+      pageSize: String(ACTIVITY_PAGE_SIZE),
+    });
+    const r = await fetch(`/api/manager-activities?${params}`);
+    if (r.ok) {
+      const data = await r.json();
+      setActivities(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setTotal(data.total ?? 0);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void loadActivities(page);
+  }, [page]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -106,14 +129,15 @@ export default function ActivityPage() {
       }),
     });
     if (res.ok) {
-      const activity: Activity = await res.json();
-      setActivities((prev) => [activity, ...prev]);
       setSelectedSeller(null);
       setDescription("");
       setCategory("OTHER");
       setUploadedFiles([]);
       setSuccessMsg("Activity logged successfully!");
       setTimeout(() => setSuccessMsg(""), 3000);
+      // Refresh page 1 so the new entry shows at the top.
+      if (page !== 1) setPage(1);
+      else void loadActivities(1);
     }
     setSubmitting(false);
   }
@@ -245,7 +269,7 @@ export default function ActivityPage() {
             <Clock className="h-5 w-5 text-zinc-400" />
             My Activity History
             {!loading && (
-              <span className="text-sm font-normal text-zinc-500 ml-1">({activities.length})</span>
+              <span className="text-sm font-normal text-zinc-500 ml-1">({total})</span>
             )}
           </h2>
 
@@ -261,6 +285,12 @@ export default function ActivityPage() {
             </Card>
           ) : (
             <div className="space-y-3">
+              {totalPages > 1 && (
+                <p className="text-xs text-zinc-500">
+                  Showing {(page - 1) * ACTIVITY_PAGE_SIZE + 1}–
+                  {(page - 1) * ACTIVITY_PAGE_SIZE + activities.length} of {total}
+                </p>
+              )}
               {activities.map((a) => (
                 <div
                   key={a.id}
@@ -310,10 +340,108 @@ export default function ActivityPage() {
                   </div>
                 </div>
               ))}
+
+              {totalPages > 1 && (
+                <ActivityPagination
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={(p) => {
+                    setPage(p);
+                    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ActivityPagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  const windowSize = 2;
+  const pages: number[] = [];
+  for (let i = Math.max(1, page - windowSize); i <= Math.min(totalPages, page + windowSize); i++) {
+    pages.push(i);
+  }
+  const showFirst = pages[0] > 1;
+  const showLast = pages[pages.length - 1] < totalPages;
+
+  return (
+    <div className="flex items-center justify-between gap-2 pt-3 mt-2 border-t border-zinc-800">
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        className="gap-1"
+      >
+        <ChevronLeft className="h-4 w-4" /> Prev
+      </Button>
+
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {showFirst && (
+          <>
+            <ActivityPageBtn n={1} current={page} onChange={onChange} />
+            {pages[0] > 2 && <span className="px-1 text-zinc-600">…</span>}
+          </>
+        )}
+        {pages.map((n) => (
+          <ActivityPageBtn key={n} n={n} current={page} onChange={onChange} />
+        ))}
+        {showLast && (
+          <>
+            {pages[pages.length - 1] < totalPages - 1 && <span className="px-1 text-zinc-600">…</span>}
+            <ActivityPageBtn n={totalPages} current={page} onChange={onChange} />
+          </>
+        )}
+      </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className="gap-1"
+      >
+        Next <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function ActivityPageBtn({
+  n,
+  current,
+  onChange,
+}: {
+  n: number;
+  current: number;
+  onChange: (p: number) => void;
+}) {
+  const active = n === current;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(n)}
+      className={`h-8 min-w-8 px-2.5 rounded-md text-xs font-medium transition-colors ${
+        active
+          ? "brand-keep bg-brand text-white"
+          : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+      }`}
+    >
+      {n}
+    </button>
   );
 }
