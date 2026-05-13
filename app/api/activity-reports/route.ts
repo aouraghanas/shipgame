@@ -31,6 +31,9 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const take = Math.min(Number(searchParams.get("take") || "120"), 400);
+  const paginated = searchParams.get("paginated") === "1" || !!searchParams.get("page");
+  const page = Math.max(1, Number(searchParams.get("page") || "1"));
+  const pageSize = Math.min(200, Math.max(1, Number(searchParams.get("pageSize") || "50")));
 
   const where: {
     period?: FeedbackReportPeriod;
@@ -53,6 +56,31 @@ export async function GET(req: NextRequest) {
   if (from) where.fromDate = { gte: new Date(from) };
   if (to) where.toDate = { lte: new Date(to + "T23:59:59.999Z") };
 
+  if (paginated) {
+    const [items, total] = await Promise.all([
+      prisma.activityReport.findMany({
+        where,
+        include: {
+          creator: { select: { id: true, name: true } },
+          seller: { select: { id: true, name: true } },
+        },
+        orderBy: { generatedAt: "desc" },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      prisma.activityReport.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
+  }
+
+  // Legacy bare-array response for older callers that pass only `take`.
   const rows = await prisma.activityReport.findMany({
     where,
     include: {

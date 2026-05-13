@@ -243,6 +243,11 @@ const en: Dict = {
   "cash.owed.empty": "No sellers owed yet.",
   "cash.owed.name": "Seller name",
   "cash.owed.add": "Add",
+
+  // pagination
+  "pagination.prev": "Prev",
+  "pagination.next": "Next",
+  "pagination.showing": "Showing {from}–{to} of {total}",
 };
 
 const ar: Dict = {
@@ -465,6 +470,11 @@ const ar: Dict = {
   "cash.owed.empty": "لا توجد مستحقات حاليًا.",
   "cash.owed.name": "اسم البائع",
   "cash.owed.add": "إضافة",
+
+  // pagination
+  "pagination.prev": "السابق",
+  "pagination.next": "التالي",
+  "pagination.showing": "عرض {from}–{to} من {total}",
 };
 
 export const dictionaries: Record<Locale, Dict> = { en, ar };

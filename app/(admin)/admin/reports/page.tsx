@@ -17,6 +17,9 @@ import { Avatar } from "@/components/shared/Avatar";
 import { Switch } from "@/components/ui/switch";
 import { Search, Filter, Download, Paperclip, Sparkles, BarChart3 } from "lucide-react";
 import type { UserWithStats } from "@/types";
+import { Pagination } from "@/components/shared/Pagination";
+
+const REPORTS_PAGE_SIZE = 50;
 
 type Seller = { id: string; name: string; email?: string | null };
 type Activity = {
@@ -115,6 +118,11 @@ export default function ReportsPage() {
   const [keyword, setKeyword] = useState("");
   const [keywordInput, setKeywordInput] = useState("");
 
+  // Pagination for the activities list. Server returns { items, total, totalPages }.
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
@@ -196,10 +204,16 @@ export default function ReportsPage() {
     setAiGenerating(false);
   }
 
+  // Reset to page 1 whenever filters change so users don't end up on an empty
+  // far page after narrowing their query.
+  useEffect(() => {
+    setPage(1);
+  }, [fromDate, toDate, filterManager, filterSeller, keyword]);
+
   useEffect(() => {
     fetchActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate, toDate, filterManager, filterSeller, keyword]);
+  }, [fromDate, toDate, filterManager, filterSeller, keyword, page]);
 
   async function fetchActivities() {
     setLoading(true);
@@ -209,8 +223,17 @@ export default function ReportsPage() {
     if (filterManager !== "all") params.set("managerId", filterManager);
     if (filterSeller !== "all") params.set("sellerId", filterSeller);
     if (keyword) params.set("keyword", keyword);
+    params.set("paginated", "1");
+    params.set("page", String(page));
+    params.set("pageSize", String(REPORTS_PAGE_SIZE));
+
     const res = await fetch(`/api/manager-activities?${params}`);
-    if (res.ok) setActivities(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setActivities(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setTotal(data.total ?? 0);
+    }
     setLoading(false);
   }
 
@@ -579,7 +602,9 @@ export default function ReportsPage() {
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-zinc-500">
-            {activities.length} record{activities.length !== 1 ? "s" : ""} found
+            {total > 0
+              ? `Showing ${(page - 1) * REPORTS_PAGE_SIZE + 1}–${(page - 1) * REPORTS_PAGE_SIZE + activities.length} of ${total} record${total !== 1 ? "s" : ""}`
+              : `${activities.length} record${activities.length !== 1 ? "s" : ""} found`}
           </p>
           {activities.map((a) => (
             <div
@@ -629,6 +654,15 @@ export default function ReportsPage() {
               </div>
             </div>
           ))}
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onChange={(p) => {
+              setPage(p);
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         </div>
       )}
     </div>

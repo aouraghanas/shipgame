@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart2, ArrowLeft } from "lucide-react";
+import { Pagination } from "@/components/shared/Pagination";
 
 type Report = {
   id: string;
@@ -19,22 +20,31 @@ type Report = {
   trigger: string;
 };
 
+const OPS_PAGE_SIZE = 25;
+
 export default function OpsActivityIntelPage() {
   const [rows, setRows] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetch("/api/activity-reports?take=50")
+    setLoading(true);
+    fetch(`/api/activity-reports?paginated=1&page=${page}&pageSize=${OPS_PAGE_SIZE}`)
       .then(async (r) => {
         if (!r.ok) {
           setErr("Could not load activity reports.");
           return;
         }
-        setRows(await r.json());
+        const data = await r.json();
+        setRows(data.items ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   return (
     <div>
@@ -63,6 +73,11 @@ export default function OpsActivityIntelPage() {
         <Card><CardContent className="py-12 text-center text-zinc-500">No reports yet.</CardContent></Card>
       ) : (
         <div className="space-y-3">
+          {totalPages > 1 && (
+            <p className="text-xs text-zinc-500">
+              Showing {(page - 1) * OPS_PAGE_SIZE + 1}–{(page - 1) * OPS_PAGE_SIZE + rows.length} of {total}
+            </p>
+          )}
           {rows.map((r) => (
             <Card key={r.id}>
               <CardHeader className="pb-2">
@@ -85,6 +100,15 @@ export default function OpsActivityIntelPage() {
               </CardContent>
             </Card>
           ))}
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onChange={(p) => {
+              setPage(p);
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         </div>
       )}
     </div>
