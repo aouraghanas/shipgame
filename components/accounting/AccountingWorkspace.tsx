@@ -20,6 +20,7 @@ import {
 import { dec, shippingMarginLydTotal, percentOfAmount, leadFeeTotalUsd } from "@/lib/accounting-calcs";
 import { Calculator, Landmark, Pencil, Sparkles, Trash2, X } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
+import { CashflowWorkspace } from "./CashflowWorkspace";
 
 type CityRow = {
   id: string;
@@ -87,7 +88,7 @@ export function AccountingWorkspace() {
   const isLibyaOnly = role === "LIBYAN_ACCOUNTANT";
   const t = useT();
 
-  const [tab, setTab] = useState<"overview" | "ledger" | "tools" | "ai" | "admin">("overview");
+  const [tab, setTab] = useState<"overview" | "ledger" | "cashflow" | "tools" | "ai" | "admin">("overview");
 
   // Default the whole platform to "All time" on load.
   const initial = useMemo(() => presetRange("all", { from: "", to: "" }), []);
@@ -409,6 +410,7 @@ export function AccountingWorkspace() {
           [
             ["overview", "accounting.tabs.overview"],
             ["ledger", "accounting.tabs.ledger"],
+            ["cashflow", "accounting.tabs.cashflow"],
             ...(isLibyaOnly
               ? ([] as const)
               : ([
@@ -421,7 +423,7 @@ export function AccountingWorkspace() {
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id as "overview" | "ledger" | "tools" | "ai" | "admin")}
+            onClick={() => setTab(id as "overview" | "ledger" | "cashflow" | "tools" | "ai" | "admin")}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               tab === id
                 ? "brand-keep bg-brand text-white"
@@ -751,6 +753,8 @@ export function AccountingWorkspace() {
           </Card>
         </div>
       )}
+
+      {tab === "cashflow" && <CashflowWorkspace />}
 
       {!isLibyaOnly && tab === "tools" && <div>{tools}</div>}
 

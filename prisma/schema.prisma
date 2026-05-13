@@ -84,6 +84,7 @@ model User {
   activityReports    ActivityReport[]   @relation("ActivityReportCreator")
   accountingLedgerEntries AccountingLedgerEntry[] @relation("LedgerCreator")
   accountingAiReports     AccountingAiReport[]     @relation("AccountingAiCreator")
+  cashOperations          CashOperation[]          @relation("CashOpCreator")
   ticketsCreated          SupportTicket[]          @relation("TicketCreator")
   ticketsAssigned         SupportTicket[]          @relation("TicketAssignee")
   ticketAttachments       SupportTicketAttachment[] @relation("TicketAttachmentUploader")
@@ -545,6 +546,69 @@ model SupportTicketComment {
   user   User          @relation("TicketCommentAuthor", fields: [userId], references: [id])
 
   @@index([ticketId])
+}
+
+// ——— Cashflow ledger v2 (BizWallet-style multi-currency wallet) ———
+//
+// Parallel to AccountingLedgerEntry while we test it. Same currencies
+// (MAD/USD/LYD), same accountant access rules, but richer operation
+// types and a native concept of "owed sellers". Balances are computed
+// server-side from these rows on demand.
+
+enum CashOperationType {
+  ADD_BALANCE         // revenue +: top-up a currency directly
+  FROM_DEX            // revenue +: DEX payout (LYD), nets out fulfillment + confirmation fees
+  BUY_COD_PRODUCT     // expense −: buy a COD drop product
+  BUY_SELLER_STOCK    // expense −: buy stock from supplier for a seller
+  SELLER_PAY_STOCK    // neutral ⇄: seller pays for their stock (no balance change, audit only)
+  CURRENCY_SWAP       // neutral ⇄: subtract origin currency, add destination currency
+  SALARY              // expense −: pay a salary
+  OFFICE_EXPENSE      // expense −: office overhead
+  WITHDRAW            // expense −: cash-out in USD (amount + fees subtracted)
+  OTHER               // custom +/-: free-form
+}
+
+enum CashOperationDirection {
+  REVENUE
+  EXPENSE
+  NEUTRAL
+}
+
+model CashOperation {
+  id           String                  @id @default(cuid())
+  type         CashOperationType
+  direction    CashOperationDirection
+  occurredAt   DateTime
+  // Primary leg (always present)
+  amount       Decimal                 @db.Decimal(18, 4)
+  currency     AccountingCurrency
+  // Destination leg — only for CURRENCY_SWAP
+  destAmount   Decimal?                @db.Decimal(18, 4)
+  destCurrency AccountingCurrency?
+  description  String                  @db.Text
+  note         String?                 @db.Text
+  metadata     Json?
+  createdById  String
+  createdBy    User                    @relation("CashOpCreator", fields: [createdById], references: [id])
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([occurredAt(sort: Desc)])
+  @@index([type])
+  @@index([currency])
+  @@index([direction, currency])
+}
+
+/// Sellers we owe money to. Single-row-per-seller — the amount is the
+/// current outstanding balance, not a transaction. Mutated directly
+/// from the Cashflow UI.
+model OwedSeller {
+  id        String              @id @default(cuid())
+  name      String              @unique
+  amount    Decimal             @default(0) @db.Decimal(18, 4)
+  currency  AccountingCurrency  @default(USD)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 }
 
 // ——— Per-user inbox notifications (ticket events, etc.) ———
