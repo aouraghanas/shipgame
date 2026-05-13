@@ -143,11 +143,6 @@ export default function AdminFeedbackPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Seller Recommendations Intelligence</h1>
-        <p className="mt-1 text-zinc-400">Review manager notes and generate AI daily, weekly, and monthly reports.</p>
-      </div>
-
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

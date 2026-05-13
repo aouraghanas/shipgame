@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
-import { MessageSquarePlus, Lightbulb, User, Clock } from "lucide-react";
+import { Lightbulb, User, Clock } from "lucide-react";
 
 type FeedbackEntry = {
   id: string;
@@ -117,15 +117,6 @@ export default function FeedbackPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <MessageSquarePlus className="h-8 w-8 text-indigo-400" />
-          Seller Recommendations
-        </h1>
-        <p className="text-zinc-400 mt-1">
-          Capture seller suggestions, requests, concerns, and product ideas.
-        </p>
-      </div>
 
       {success && <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">{success}</div>}
       {error && <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">{error}</div>}

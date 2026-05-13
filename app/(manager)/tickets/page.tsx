@@ -304,14 +304,6 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <Ticket className="h-8 w-8 text-indigo-400" />
-          {t("tickets.title")}
-        </h1>
-        <p className="text-zinc-400 mt-1 max-w-3xl">{t("tickets.subtitle")}</p>
-      </div>
-
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Inbox className="h-5 w-5 text-indigo-400" />

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar } from "@/components/shared/Avatar";
 import { Switch } from "@/components/ui/switch";
-import { Search, Filter, Download, Paperclip, ClipboardList, Sparkles, BarChart3 } from "lucide-react";
+import { Search, Filter, Download, Paperclip, Sparkles, BarChart3 } from "lucide-react";
 import type { UserWithStats } from "@/types";
 
 type Seller = { id: string; name: string; email?: string | null };
@@ -235,14 +235,7 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <ClipboardList className="h-8 w-8 text-indigo-400" />
-            Activity Reports
-          </h1>
-          <p className="text-zinc-400 mt-1">Review all account manager interactions with sellers</p>
-        </div>
+      <div className="mb-4 flex justify-end">
         <a href={buildExportUrl()} download>
           <Button variant="outline" className="gap-2">
             <Download className="h-4 w-4" />

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
 import { cn } from "@/lib/utils";
-import { ClipboardList, Paperclip, X, Plus, User, Clock } from "lucide-react";
+import { Paperclip, X, Plus, User, Clock } from "lucide-react";
 
 type UploadedFile = { url: string; name: string; type: string };
 type Activity = {
@@ -120,14 +120,6 @@ export default function ActivityPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <ClipboardList className="h-8 w-8 text-indigo-400" />
-          Activity Log
-        </h1>
-        <p className="text-zinc-400 mt-1">Record your actions and interactions with sellers</p>
-      </div>
-
       {successMsg && (
         <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-emerald-400 text-sm">
           {successMsg}

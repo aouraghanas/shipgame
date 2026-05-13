@@ -41,12 +41,9 @@ export default function AdminDashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-        <p className="text-zinc-400 mt-1">
-          {stats ? `${stats.currentMonth} · ${stats.activeManagers} active managers` : "Loading…"}
-        </p>
-      </div>
+      <p className="mb-4 text-sm text-zinc-400">
+        {stats ? `${stats.currentMonth} · ${stats.activeManagers} active managers` : "Loading…"}
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {sections.map(({ href, icon: Icon, label, desc }) => (

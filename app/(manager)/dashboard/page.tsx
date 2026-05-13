@@ -99,10 +99,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
-        <p className="text-zinc-400 mt-1">{formatMonthKey(monthKey)}</p>
-      </div>
+      <p className="mb-4 text-sm text-zinc-400">{formatMonthKey(monthKey)}</p>
 
       <Link href="/tickets" className="group block mb-6">
         <div className="rounded-xl border border-indigo-500/40 bg-indigo-950/30 px-4 py-4 flex items-center gap-4 transition-colors hover:border-indigo-400/70 hover:bg-indigo-950/45">

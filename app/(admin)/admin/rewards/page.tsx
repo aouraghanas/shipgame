@@ -128,13 +128,7 @@ export default function RewardsPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Rewards & scoring</h1>
-        <p className="text-zinc-400 mt-1">{formatMonthKey(monthKey)}</p>
-        <p className="text-sm text-zinc-500 mt-2">
-          Configure how many top/bottom ranks show prize or penalty copy on the leaderboard, and how points are calculated for this month.
-        </p>
-      </div>
+      <p className="text-sm text-zinc-400">{formatMonthKey(monthKey)}</p>
 
       {loading ? (
         <div className="flex justify-center py-20">
