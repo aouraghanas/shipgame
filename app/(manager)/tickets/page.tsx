@@ -15,11 +15,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
 import { TICKET_PRIORITIES, TICKET_RECIPIENTS, TICKET_STATUSES, TICKET_SUBJECTS } from "@/lib/ticket-constants";
 import { ticketRowClasses, ticketStatusBadgeClasses } from "@/lib/ticket-row-styles";
 import { cn } from "@/lib/utils";
-import { Ticket, Plus, Filter, Inbox } from "lucide-react";
+import { Plus, Filter, Inbox } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
 
 type TicketRow = {
@@ -123,6 +129,7 @@ export default function TicketsPage() {
   const [assignees, setAssignees] = useState<Assignable[]>([]);
   const [msg, setMsg] = useState("");
   const [msgIsError, setMsgIsError] = useState(false);
+  const [newTicketOpen, setNewTicketOpen] = useState(false);
 
   const [form, setForm] = useState({
     subject: "SOURCING" as string,
@@ -296,6 +303,7 @@ export default function TicketsPage() {
     });
     setSeller(null);
     setSellerFreeText("");
+    setNewTicketOpen(false);
     void load();
     void loadSummary();
   }
@@ -305,10 +313,26 @@ export default function TicketsPage() {
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Inbox className="h-5 w-5 text-indigo-400" />
-          {t("tickets.queue")}
-        </h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Inbox className="h-5 w-5 text-indigo-400" />
+            {t("tickets.queue")}
+          </h2>
+          {canCreate && (
+            <Button
+              type="button"
+              className="gap-2"
+              onClick={() => {
+                setMsg("");
+                setMsgIsError(false);
+                setNewTicketOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {t("tickets.new")}
+            </Button>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {[
@@ -466,15 +490,15 @@ export default function TicketsPage() {
       </section>
 
       {canCreate && (
-        <Card className="border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Plus className="h-5 w-5 text-indigo-400" />
-              {t("tickets.new")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={createTicket} className="space-y-4 max-w-2xl">
+        <Dialog open={newTicketOpen} onOpenChange={setNewTicketOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-indigo-400" />
+                {t("tickets.new")}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={createTicket} className="space-y-4">
               <div className="space-y-2">
                 <Label>Seller {sellerOptional && <span className="text-zinc-500 font-normal">(optional)</span>}</Label>
                 <SellerCombobox
@@ -590,10 +614,15 @@ export default function TicketsPage() {
                 <Input type="datetime-local" value={form.deadlineAt} onChange={(e) => setForm((f) => ({ ...f, deadlineAt: e.target.value }))} />
               </div>
               {msg && <p className={`text-sm ${msgIsError ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>}
-              <Button type="submit">{t("common.submit")}</Button>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setNewTicketOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit">{t("common.submit")}</Button>
+              </div>
             </form>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
