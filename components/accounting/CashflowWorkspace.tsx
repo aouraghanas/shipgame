@@ -838,6 +838,15 @@ function OwedSellersPanel({
   const t = useT();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
+  // New-seller form state. Controlled so submission doesn't depend on the
+  // Radix Select bubbling its value into FormData (which can miss when the
+  // user never opens the dropdown).
+  const defaultCurrency: Currency = allowedCurrencies[0] ?? "USD";
+  const [newName, setNewName] = useState("");
+  const [newAmount, setNewAmount] = useState("0");
+  const [newCurrency, setNewCurrency] = useState<Currency>(defaultCurrency);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     // Reset drafts when the list changes.
     setDrafts({});
@@ -851,34 +860,58 @@ function OwedSellersPanel({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: next }),
     });
-    setMsg(r.ok ? t("cash.toast.saved") : t("cash.toast.failed"));
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      setMsg(extractError(j) || t("cash.toast.failed"));
+    } else {
+      setMsg(t("cash.toast.saved"));
+    }
     onChange();
   }
 
   async function removeSeller(id: string) {
     if (!confirm(t("cash.confirm.removeSeller"))) return;
     const r = await fetch(`/api/cash/owed-sellers/${id}`, { method: "DELETE" });
-    setMsg(r.ok ? t("cash.toast.deleted") : t("cash.toast.failed"));
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      setMsg(extractError(j) || t("cash.toast.failed"));
+    } else {
+      setMsg(t("cash.toast.deleted"));
+    }
     onChange();
   }
 
   async function addSeller(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const body = {
-      name: String(fd.get("name") || "").trim(),
-      amount: String(fd.get("amount") || "0"),
-      currency: String(fd.get("currency") || "USD"),
-    };
-    if (!body.name) return;
-    const r = await fetch("/api/cash/owed-sellers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setMsg(r.ok ? t("cash.toast.saved") : t("cash.toast.failed"));
-    e.currentTarget.reset();
-    onChange();
+    const name = newName.trim();
+    if (!name) {
+      setMsg(t("cash.owed.nameRequired"));
+      return;
+    }
+    setSaving(true);
+    try {
+      const r = await fetch("/api/cash/owed-sellers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          amount: newAmount || "0",
+          currency: newCurrency,
+        }),
+      });
+      if (r.ok) {
+        setMsg(t("cash.toast.saved"));
+        setNewName("");
+        setNewAmount("0");
+        setNewCurrency(defaultCurrency);
+        onChange();
+      } else {
+        const j = await r.json().catch(() => ({}));
+        setMsg(extractError(j) || t("cash.toast.failed"));
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -919,19 +952,36 @@ function OwedSellersPanel({
           </div>
         ))}
 
-        <form onSubmit={addSeller} className="grid gap-2 sm:grid-cols-[1fr_8rem_6rem_auto] items-end pt-2 border-t border-zinc-800">
+        <form
+          onSubmit={addSeller}
+          className="grid gap-2 sm:grid-cols-[1fr_8rem_6rem_auto] items-end pt-2 border-t border-zinc-800"
+        >
           <div className="space-y-1">
             <Label className="text-xs">{t("cash.owed.name")}</Label>
-            <Input name="name" required />
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">{t("cash.field.amount")}</Label>
-            <Input name="amount" type="number" step="0.001" defaultValue="0" />
+            <Input
+              type="number"
+              step="0.001"
+              value={newAmount}
+              onChange={(e) => setNewAmount(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">{t("cash.field.currency")}</Label>
-            <Select name="currency" defaultValue="USD">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={newCurrency}
+              onValueChange={(v) => setNewCurrency(v as Currency)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {allowedCurrencies.map((c) => (
                   <SelectItem key={c} value={c}>
@@ -941,9 +991,30 @@ function OwedSellersPanel({
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full sm:w-auto">{t("cash.owed.add")}</Button>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto"
+            disabled={saving || !newName.trim()}
+          >
+            {saving ? t("common.saving") : t("cash.owed.add")}
+          </Button>
         </form>
       </CardContent>
     </Card>
   );
+}
+
+function extractError(j: unknown): string {
+  if (j && typeof j === "object") {
+    const err = (j as { error?: unknown }).error;
+    if (typeof err === "string") return err;
+    if (err && typeof err === "object") {
+      try {
+        return JSON.stringify(err);
+      } catch {
+        return "";
+      }
+    }
+  }
+  return "";
 }
