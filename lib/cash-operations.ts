@@ -82,7 +82,11 @@ const officeSchema = z.object({
 const withdrawSchema = z.object({
   type: z.literal("WITHDRAW"),
   sellerName: z.string().min(1).max(200),
-  amountUsd: decString,
+  // Backwards compat: older clients sent `amountUsd`; new clients send `amount`
+  // alongside a `currency` field. Accept either, normalize downstream.
+  amount: decString.optional(),
+  amountUsd: decString.optional(),
+  currency: currencyEnum.optional(),
   method: z.enum(["Moroccan Bank", "Wise", "Payoneer", "Binance", "RedotPay"]),
   fees: decString,
   occurredAt: dateString,
@@ -232,18 +236,20 @@ export function buildOperationRow(input: CashOperationInput): CashOperationPersi
       };
 
     case "WITHDRAW": {
-      const total = num(input.amountUsd) + num(input.fees);
+      const rawAmount = input.amount ?? input.amountUsd ?? "0";
+      const currency: AccountingCurrency = input.currency ?? "USD";
+      const total = num(rawAmount) + num(input.fees);
       return {
         type: "WITHDRAW",
         direction: "EXPENSE",
         occurredAt,
         amount: String(total),
-        currency: "USD",
+        currency,
         destAmount: null,
         destCurrency: null,
-        description: `Withdraw ${input.amountUsd} USD via ${input.method} (fees ${input.fees}) → ${input.sellerName}`,
+        description: `Withdraw ${rawAmount} ${currency} via ${input.method} (fees ${input.fees}) → ${input.sellerName}`,
         note: null,
-        metadata: { ...input, totalCharged: total },
+        metadata: { ...input, currency, amount: rawAmount, totalCharged: total },
       };
     }
 

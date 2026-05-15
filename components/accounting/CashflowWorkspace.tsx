@@ -625,7 +625,8 @@ function OperationForm({
           onSubmit({
             type,
             sellerName: fd.sellerName,
-            amountUsd: fd.amountUsd,
+            amount: fd.amount,
+            currency: fd.currency,
             method: fd.method,
             fees: fd.fees,
             occurredAt: fd.occurredAt,
@@ -633,7 +634,8 @@ function OperationForm({
         }
       >
         <FieldText name="sellerName" label={t("cash.field.sellerName")} />
-        <FieldNumber name="amountUsd" label={t("cash.field.amountUsd")} />
+        <FieldNumber name="amount" label={t("cash.field.amount")} />
+        <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <div className="space-y-1">
           <Label className="text-xs">{t("cash.field.method")}</Label>
           <Select name="method" defaultValue="Wise">
