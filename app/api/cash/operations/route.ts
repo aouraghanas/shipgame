@@ -13,6 +13,7 @@ import {
 } from "@/lib/cash-operations";
 import {
   type AccountingCurrency,
+  type CashOperationDirection,
   type CashOperationType,
   type Prisma,
 } from "@prisma/client";
@@ -30,6 +31,8 @@ const ALL_TYPES = [
   "OTHER",
 ] as const satisfies readonly CashOperationType[];
 
+const ALL_DIRECTIONS = ["REVENUE", "EXPENSE", "NEUTRAL"] as const satisfies readonly CashOperationDirection[];
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessAccounting(session))
@@ -38,17 +41,50 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const take = Math.min(Math.max(Number(sp.get("take") || "200"), 1), 500);
   const typeParam = sp.get("type");
+  const directionParam = sp.get("direction");
+  const paginated = sp.get("paginated") === "1" || !!sp.get("page");
+  const page = Math.max(1, Number(sp.get("page") || "1"));
+  const pageSize = Math.min(200, Math.max(1, Number(sp.get("pageSize") || "50")));
   const scope = currencyScopeFor(session);
 
   const where: Prisma.CashOperationWhereInput = {};
   if (typeParam && (ALL_TYPES as readonly string[]).includes(typeParam)) {
     where.type = typeParam as CashOperationType;
   }
+  if (directionParam && (ALL_DIRECTIONS as readonly string[]).includes(directionParam)) {
+    where.direction = directionParam as CashOperationDirection;
+  }
   if (scope) {
     // Libyan accountant: only show ops whose primary OR destination currency is LYD.
     where.OR = [{ currency: scope }, { destCurrency: scope }];
   }
 
+  if (paginated) {
+    const [rows, total] = await Promise.all([
+      prisma.cashOperation.findMany({
+        where,
+        orderBy: { occurredAt: "desc" },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+        include: { createdBy: { select: { id: true, name: true } } },
+      }),
+      prisma.cashOperation.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items: rows.map((r) => ({
+        ...r,
+        amount: r.amount.toString(),
+        destAmount: r.destAmount?.toString() ?? null,
+      })),
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
+  }
+
+  // Legacy bare-array response (default take=200, max 500) preserved for older callers.
   const rows = await prisma.cashOperation.findMany({
     where,
     orderBy: { occurredAt: "desc" },

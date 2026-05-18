@@ -29,6 +29,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
+import { Pagination } from "@/components/shared/Pagination";
+
+const OPERATIONS_PAGE_SIZE = 50;
 
 type Currency = "MAD" | "USD" | "LYD";
 type Direction = "REVENUE" | "EXPENSE" | "NEUTRAL";
@@ -165,21 +168,54 @@ export function CashflowWorkspace() {
   const [filter, setFilter] = useState<FilterId>("all");
   const [submitting, setSubmitting] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOps, setTotalOps] = useState(0);
+
+  // Build the query string for the operations list based on the active filter.
+  // The filter pills map to direction (revenue/expense/neutral) or specific
+  // type (SALARY/OFFICE_EXPENSE/WITHDRAW); everything else means "no filter".
+  const opsQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      paginated: "1",
+      page: String(page),
+      pageSize: String(OPERATIONS_PAGE_SIZE),
+    });
+    if (filter === "revenue") params.set("direction", "REVENUE");
+    else if (filter === "expense") params.set("direction", "EXPENSE");
+    else if (filter === "neutral") params.set("direction", "NEUTRAL");
+    else if (filter === "SALARY" || filter === "OFFICE_EXPENSE" || filter === "WITHDRAW") {
+      params.set("type", filter);
+    }
+    return params.toString();
+  }, [filter, page]);
+
+  // Reset to page 1 whenever the filter changes so we don't land on an empty
+  // page that no longer exists for the narrower query.
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [bRes, oRes, sRes] = await Promise.all([
         fetch("/api/cash/balances"),
-        fetch("/api/cash/operations?take=300"),
+        fetch(`/api/cash/operations?${opsQuery}`),
         fetch("/api/cash/owed-sellers"),
       ]);
       if (bRes.ok) setBalances(await bRes.json());
-      if (oRes.ok) setOperations(await oRes.json());
+      if (oRes.ok) {
+        const data = await oRes.json();
+        setOperations(data.items ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotalOps(data.total ?? 0);
+      }
       if (sRes.ok) setOwed(await sRes.json());
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [opsQuery]);
 
   useEffect(() => {
     void reload();
@@ -195,7 +231,9 @@ export function CashflowWorkspace() {
       });
       if (r.ok) {
         setMsg(t("cash.toast.saved"));
-        await reload();
+        // Jump back to page 1 so the brand-new transaction is visible at the top.
+        if (page !== 1) setPage(1);
+        else await reload();
       } else {
         const j = await r.json().catch(() => ({}));
         // API returns either { error: "string" } or { error: { fieldErrors, formErrors } }
@@ -224,13 +262,9 @@ export function CashflowWorkspace() {
     void reload();
   }
 
-  const filteredOps = useMemo(() => {
-    if (filter === "all") return operations;
-    if (filter === "revenue") return operations.filter((o) => o.direction === "REVENUE");
-    if (filter === "expense") return operations.filter((o) => o.direction === "EXPENSE");
-    if (filter === "neutral") return operations.filter((o) => o.direction === "NEUTRAL");
-    return operations.filter((o) => o.type === filter);
-  }, [operations, filter]);
+  // The server already applies the filter (direction or type), so we render
+  // the rows directly. Kept as a memo so downstream JSX stays stable.
+  const filteredOps = useMemo(() => operations, [operations]);
 
   const owedTotalDisplay = useMemo(() => {
     if (!balances) return "0.000";
@@ -329,7 +363,7 @@ export function CashflowWorkspace() {
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base">
                   {t("cash.transactions")}{" "}
-                  <span className="ml-1 text-xs text-zinc-500">({filteredOps.length})</span>
+                  <span className="ml-1 text-xs text-zinc-500">({totalOps})</span>
                 </CardTitle>
                 <Button
                   type="button"
@@ -359,6 +393,12 @@ export function CashflowWorkspace() {
               </div>
             </CardHeader>
             <CardContent className="space-y-1.5 max-h-[560px] overflow-y-auto">
+              {totalPages > 1 && (
+                <p className="text-[11px] text-zinc-500 px-1">
+                  Showing {(page - 1) * OPERATIONS_PAGE_SIZE + 1}–
+                  {(page - 1) * OPERATIONS_PAGE_SIZE + filteredOps.length} of {totalOps}
+                </p>
+              )}
               {filteredOps.length === 0 && (
                 <p className="px-2 py-10 text-center text-sm text-zinc-500">
                   {t("cash.empty")}
@@ -400,6 +440,13 @@ export function CashflowWorkspace() {
                   </div>
                 </div>
               ))}
+
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onChange={(p) => setPage(p)}
+                className="mt-2"
+              />
             </CardContent>
           </Card>
 
