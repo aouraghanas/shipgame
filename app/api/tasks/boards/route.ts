@@ -66,8 +66,13 @@ const postSchema = z.object({
   key: z.string().min(1).max(20).regex(/^[A-Za-z0-9_-]+$/).optional(),
   description: z.string().max(1000).optional(),
   color: z.string().max(20).optional(),
-  icon: z.string().max(8).optional(),
+  icon: z.string().max(16).optional(),
   visibility: z.enum(["PUBLIC", "TEAM_ONLY", "PRIVATE"]).default("PUBLIC"),
+  /**
+   * Initial member list (relevant when visibility = TEAM_ONLY). Admins
+   * are implicit owners, so they don't need to be in this list.
+   */
+  memberIds: z.array(z.string()).optional(),
 });
 
 /** POST /api/tasks/boards — admin-only, creates a board with default columns. */
@@ -94,6 +99,10 @@ export async function POST(req: NextRequest) {
     _max: { sortOrder: true },
   });
 
+  const memberIds = Array.from(
+    new Set((parsed.data.memberIds ?? []).filter(Boolean))
+  );
+
   try {
     const board = await prisma.taskBoard.create({
       data: {
@@ -115,6 +124,14 @@ export async function POST(req: NextRequest) {
             ],
           },
         },
+        members: memberIds.length
+          ? {
+              createMany: {
+                data: memberIds.map((userId) => ({ userId })),
+                skipDuplicates: true,
+              },
+            }
+          : undefined,
       },
     });
 

@@ -45,6 +45,7 @@ import { TaskCard } from "./TaskCard";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskDetailDrawer } from "./TaskDetailDrawer";
 import { NewTaskDialog } from "./NewTaskDialog";
+import { NewBoardDialog } from "./NewBoardDialog";
 import type {
   BoardListItem,
   BoardWithTasks,
@@ -93,6 +94,9 @@ export function TasksWorkspace() {
 
   // New task dialog
   const [newTaskColumnId, setNewTaskColumnId] = useState<string | null>(null);
+
+  // New board dialog (admin only)
+  const [showNewBoard, setShowNewBoard] = useState(false);
 
   // Drag tracking
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -353,19 +357,7 @@ export function TasksWorkspace() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => {
-              const name = prompt(t("tasks.newBoard.prompt"));
-              if (!name) return;
-              void fetch("/api/tasks/boards", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name }),
-              })
-                .then((r) => {
-                  if (r.ok) void loadBoards();
-                })
-                .catch(() => undefined);
-            }}
+            onClick={() => setShowNewBoard(true)}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
             {t("tasks.newBoard")}
@@ -523,6 +515,18 @@ export function TasksWorkspace() {
           onCreated={() => {
             setNewTaskColumnId(null);
             if (activeBoardId) void loadBoard(activeBoardId);
+          }}
+        />
+      )}
+
+      {/* New board dialog (admin) */}
+      {showNewBoard && (
+        <NewBoardDialog
+          users={users}
+          onClose={() => setShowNewBoard(false)}
+          onCreated={() => {
+            setShowNewBoard(false);
+            void loadBoards();
           }}
         />
       )}
