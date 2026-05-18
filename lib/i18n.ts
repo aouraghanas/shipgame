@@ -244,6 +244,9 @@ const en: Dict = {
   "cash.owed.name": "Seller name",
   "cash.owed.add": "Add",
   "cash.owed.nameRequired": "Enter a seller name.",
+  "cash.owed.edit": "Edit",
+  "cash.owed.editTitle": "Set owed to sellers",
+  "cash.owed.editHint": "Enter the current total amount you owe to sellers. This replaces the previous figure.",
 
   // pagination
   "pagination.prev": "Prev",
@@ -472,6 +475,9 @@ const ar: Dict = {
   "cash.owed.name": "اسم البائع",
   "cash.owed.add": "إضافة",
   "cash.owed.nameRequired": "يرجى إدخال اسم البائع.",
+  "cash.owed.edit": "تعديل",
+  "cash.owed.editTitle": "تحديد المستحقات للبائعين",
+  "cash.owed.editHint": "أدخل المبلغ الإجمالي المستحق حاليًا للبائعين. سيتم استبدال القيمة السابقة.",
 
   // pagination
   "pagination.prev": "السابق",

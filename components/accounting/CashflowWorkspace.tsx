@@ -20,6 +20,7 @@ import {
   DollarSign,
   Handshake,
   Package,
+  Pencil,
   Receipt,
   ShoppingCart,
   Trash2,
@@ -30,6 +31,12 @@ import {
 } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
 import { Pagination } from "@/components/shared/Pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const OPERATIONS_PAGE_SIZE = 50;
 
@@ -70,9 +77,7 @@ type Operation = {
   createdBy: { id: string; name: string };
 };
 
-type OwedSeller = {
-  id: string;
-  name: string;
+type OwedTotal = {
   amount: string;
   currency: Currency;
 };
@@ -161,7 +166,7 @@ export function CashflowWorkspace() {
 
   const [balances, setBalances] = useState<Balances | null>(null);
   const [operations, setOperations] = useState<Operation[]>([]);
-  const [owed, setOwed] = useState<OwedSeller[]>([]);
+  const [owedTotal, setOwedTotal] = useState<OwedTotal | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [selectedOp, setSelectedOp] = useState<OpType | null>(null);
@@ -199,10 +204,10 @@ export function CashflowWorkspace() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [bRes, oRes, sRes] = await Promise.all([
+      const [bRes, oRes, tRes] = await Promise.all([
         fetch("/api/cash/balances"),
         fetch(`/api/cash/operations?${opsQuery}`),
-        fetch("/api/cash/owed-sellers"),
+        fetch("/api/cash/owed-total"),
       ]);
       if (bRes.ok) setBalances(await bRes.json());
       if (oRes.ok) {
@@ -211,7 +216,7 @@ export function CashflowWorkspace() {
         setTotalPages(data.totalPages ?? 1);
         setTotalOps(data.total ?? 0);
       }
-      if (sRes.ok) setOwed(await sRes.json());
+      if (tRes.ok) setOwedTotal(await tRes.json());
     } finally {
       setLoading(false);
     }
@@ -266,15 +271,7 @@ export function CashflowWorkspace() {
   // the rows directly. Kept as a memo so downstream JSX stays stable.
   const filteredOps = useMemo(() => operations, [operations]);
 
-  const owedTotalDisplay = useMemo(() => {
-    if (!balances) return "0.000";
-    // Combined total across currencies — preserve currency split in tooltips.
-    const sum = (["MAD", "USD", "LYD"] as Currency[]).reduce(
-      (acc, c) => acc + Number(balances.owedTotals[c] ?? 0),
-      0
-    );
-    return fmtAmount(sum);
-  }, [balances]);
+  const canEditOwed = isAdmin || role === "ACCOUNTANT" || isLibyaOnly;
 
   return (
     <div className="space-y-6">
@@ -289,12 +286,12 @@ export function CashflowWorkspace() {
             subtitle={t("cash.balance.subtitle")}
           />
         ))}
-        <BalanceCard
-          tone="from-red-500 to-rose-700"
-          label={t("cash.balance.owed")}
-          amount={owedTotalDisplay}
-          subtitle={t("cash.balance.owedSubtitle")}
-          accentText="text-red-300"
+        <OwedToSellersCard
+          value={owedTotal}
+          allowedCurrencies={allowedCurrencies}
+          canEdit={canEditOwed}
+          onSaved={() => void reload()}
+          setMsg={setMsg}
         />
       </div>
 
@@ -449,13 +446,6 @@ export function CashflowWorkspace() {
               />
             </CardContent>
           </Card>
-
-          <OwedSellersPanel
-            owed={owed}
-            allowedCurrencies={allowedCurrencies}
-            onChange={() => void reload()}
-            setMsg={setMsg}
-          />
         </div>
       </div>
     </div>
@@ -880,90 +870,56 @@ function FieldRegion() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Owed sellers                                                         */
+/* Owed to sellers — single editable total                              */
 /* ------------------------------------------------------------------ */
 
-function OwedSellersPanel({
-  owed,
+function OwedToSellersCard({
+  value,
   allowedCurrencies,
-  onChange,
+  canEdit,
+  onSaved,
   setMsg,
 }: {
-  owed: OwedSeller[];
+  value: OwedTotal | null;
   allowedCurrencies: Currency[];
-  onChange: () => void;
+  canEdit: boolean;
+  onSaved: () => void;
   setMsg: (s: string) => void;
 }) {
   const t = useT();
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-
-  // New-seller form state. Controlled so submission doesn't depend on the
-  // Radix Select bubbling its value into FormData (which can miss when the
-  // user never opens the dropdown).
   const defaultCurrency: Currency = allowedCurrencies[0] ?? "USD";
-  const [newName, setNewName] = useState("");
-  const [newAmount, setNewAmount] = useState("0");
-  const [newCurrency, setNewCurrency] = useState<Currency>(defaultCurrency);
+  const displayAmount = value?.amount ?? "0";
+  const displayCurrency: Currency = value?.currency ?? defaultCurrency;
+
+  const [open, setOpen] = useState(false);
+  const [editAmount, setEditAmount] = useState(displayAmount);
+  const [editCurrency, setEditCurrency] = useState<Currency>(displayCurrency);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    // Reset drafts when the list changes.
-    setDrafts({});
-  }, [owed]);
-
-  async function saveAmount(id: string) {
-    const next = drafts[id];
-    if (next === undefined) return;
-    const r = await fetch(`/api/cash/owed-sellers/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: next }),
-    });
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}));
-      setMsg(extractError(j) || t("cash.toast.failed"));
-    } else {
-      setMsg(t("cash.toast.saved"));
-    }
-    onChange();
+  // Whenever the card opens, sync the dialog inputs with the current value
+  // so the user is editing the live figure rather than a stale draft.
+  function openDialog() {
+    setEditAmount(displayAmount);
+    setEditCurrency(displayCurrency);
+    setOpen(true);
   }
 
-  async function removeSeller(id: string) {
-    if (!confirm(t("cash.confirm.removeSeller"))) return;
-    const r = await fetch(`/api/cash/owed-sellers/${id}`, { method: "DELETE" });
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}));
-      setMsg(extractError(j) || t("cash.toast.failed"));
-    } else {
-      setMsg(t("cash.toast.deleted"));
-    }
-    onChange();
-  }
-
-  async function addSeller(e: React.FormEvent<HTMLFormElement>) {
+  async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const name = newName.trim();
-    if (!name) {
-      setMsg(t("cash.owed.nameRequired"));
-      return;
-    }
     setSaving(true);
     try {
-      const r = await fetch("/api/cash/owed-sellers", {
-        method: "POST",
+      const r = await fetch("/api/cash/owed-total", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          amount: newAmount || "0",
-          currency: newCurrency,
+          amount: editAmount || "0",
+          currency: editCurrency,
         }),
       });
       if (r.ok) {
         setMsg(t("cash.toast.saved"));
-        setNewName("");
-        setNewAmount("0");
-        setNewCurrency(defaultCurrency);
-        onChange();
+        setOpen(false);
+        onSaved();
       } else {
         const j = await r.json().catch(() => ({}));
         setMsg(extractError(j) || t("cash.toast.failed"));
@@ -974,92 +930,103 @@ function OwedSellersPanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("cash.owed.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {owed.length === 0 && (
-          <p className="text-sm text-zinc-500">{t("cash.owed.empty")}</p>
-        )}
-        {owed.map((s) => (
-          <div
-            key={s.id}
-            className="flex flex-wrap items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2"
-          >
-            <span className="flex-1 min-w-[8rem] text-sm text-zinc-200 font-medium">{s.name}</span>
-            <Input
-              className="w-32 font-mono text-sm"
-              value={drafts[s.id] ?? s.amount}
-              onChange={(e) => setDrafts((d) => ({ ...d, [s.id]: e.target.value }))}
-              onBlur={() => void saveAmount(s.id)}
-              type="number"
-              step="0.001"
-            />
+    <>
+      <Card className="relative overflow-hidden group">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-red-500 to-rose-700" />
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs uppercase tracking-wider text-zinc-500">
+              {t("cash.balance.owed")}
+            </p>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={openDialog}
+                className="text-zinc-500 hover:text-zinc-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={t("cash.owed.edit")}
+                title={t("cash.owed.edit")}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <p className="text-2xl font-semibold font-mono text-red-300">
+              {fmtAmount(displayAmount)}
+            </p>
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-mono uppercase text-zinc-300">
-              {s.currency}
+              {displayCurrency}
             </span>
-            <Button
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-1">
+            {t("cash.balance.owedSubtitle")}
+          </p>
+          {canEdit && (
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => void removeSeller(s.id)}
-              aria-label={t("common.delete")}
+              onClick={openDialog}
+              className="mt-2 text-[11px] text-brand hover:underline"
             >
-              <Trash2 className="h-4 w-4 text-red-400" />
-            </Button>
-          </div>
-        ))}
+              {t("cash.owed.edit")}
+            </button>
+          )}
+        </CardContent>
+      </Card>
 
-        <form
-          onSubmit={addSeller}
-          className="grid gap-2 sm:grid-cols-[1fr_8rem_6rem_auto] items-end pt-2 border-t border-zinc-800"
-        >
-          <div className="space-y-1">
-            <Label className="text-xs">{t("cash.owed.name")}</Label>
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">{t("cash.field.amount")}</Label>
-            <Input
-              type="number"
-              step="0.001"
-              value={newAmount}
-              onChange={(e) => setNewAmount(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">{t("cash.field.currency")}</Label>
-            <Select
-              value={newCurrency}
-              onValueChange={(v) => setNewCurrency(v as Currency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {allowedCurrencies.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="submit"
-            className="w-full sm:w-auto"
-            disabled={saving || !newName.trim()}
-          >
-            {saving ? t("common.saving") : t("cash.owed.add")}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("cash.owed.editTitle")}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={save} className="space-y-3">
+            <p className="text-xs text-zinc-500">{t("cash.owed.editHint")}</p>
+            <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+              <div className="space-y-1">
+                <Label className="text-xs">{t("cash.field.amount")}</Label>
+                <Input
+                  type="number"
+                  step="0.001"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">{t("cash.field.currency")}</Label>
+                <Select
+                  value={editCurrency}
+                  onValueChange={(v) => setEditCurrency(v as Currency)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedCurrencies.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setOpen(false)}
+                disabled={saving}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? t("common.saving") : t("common.save")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
