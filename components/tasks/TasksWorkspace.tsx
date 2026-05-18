@@ -39,7 +39,16 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, X, Filter as FilterIcon } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  Search,
+  X,
+  Filter as FilterIcon,
+} from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
 import { TaskCard } from "./TaskCard";
 import { KanbanColumn } from "./KanbanColumn";
@@ -97,6 +106,11 @@ export function TasksWorkspace() {
 
   // New board dialog (admin only)
   const [showNewBoard, setShowNewBoard] = useState(false);
+
+  // Archived boards panel — collapsed by default, admin-only feature.
+  const [archivedBoards, setArchivedBoards] = useState<BoardListItem[]>([]);
+  const [showArchivedPanel, setShowArchivedPanel] = useState(false);
+  const [loadingArchived, setLoadingArchived] = useState(false);
 
   // Drag tracking
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -323,6 +337,56 @@ export function TasksWorkspace() {
     setFilterDue("all");
   }
 
+  const loadArchivedBoards = useCallback(async () => {
+    setLoadingArchived(true);
+    try {
+      const r = await fetch("/api/tasks/boards?archived=1");
+      if (r.ok) setArchivedBoards(await r.json());
+    } finally {
+      setLoadingArchived(false);
+    }
+  }, []);
+
+  // When the panel is opened (admin only), fetch the archived boards.
+  useEffect(() => {
+    if (showArchivedPanel && isAdmin) void loadArchivedBoards();
+  }, [showArchivedPanel, isAdmin, loadArchivedBoards]);
+
+  async function archiveBoard(boardId: string) {
+    const target = boards.find((b) => b.id === boardId);
+    const label = target?.name ?? "this board";
+    if (!confirm(t("tasks.confirm.archiveBoard").replace("{name}", label))) return;
+    const r = await fetch(`/api/tasks/boards/${boardId}`, { method: "DELETE" });
+    if (r.ok) {
+      // Switch to another board so the canvas isn't stuck on a now-archived id.
+      const remaining = boards.filter((b) => b.id !== boardId);
+      setActiveBoardId(remaining[0]?.id ?? null);
+      setBoard(null);
+      await loadBoards();
+      if (showArchivedPanel) await loadArchivedBoards();
+    } else {
+      const j = await r.json().catch(() => ({}));
+      setError(typeof j?.error === "string" ? j.error : t("tasks.toast.failed"));
+    }
+  }
+
+  async function restoreBoard(boardId: string) {
+    const r = await fetch(`/api/tasks/boards/${boardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived: false }),
+    });
+    if (r.ok) {
+      await loadBoards();
+      await loadArchivedBoards();
+      // Auto-focus the restored board.
+      setActiveBoardId(boardId);
+    } else {
+      const j = await r.json().catch(() => ({}));
+      setError(typeof j?.error === "string" ? j.error : t("tasks.toast.failed"));
+    }
+  }
+
   const filtersActive =
     !!search ||
     filterAssignee !== "all" ||
@@ -353,17 +417,91 @@ export function TasksWorkspace() {
           </button>
         ))}
         {isAdmin && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowNewBoard(true)}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            {t("tasks.newBoard")}
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowNewBoard(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              {t("tasks.newBoard")}
+            </Button>
+            {activeBoardId && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void archiveBoard(activeBoardId)}
+                title={t("tasks.archiveBoard")}
+                className="text-zinc-400 hover:text-red-300"
+              >
+                <Archive className="h-3.5 w-3.5 mr-1" />
+                {t("tasks.archiveBoard")}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchivedPanel((v) => !v)}
+              className="ml-auto text-zinc-400 hover:text-zinc-100"
+            >
+              {showArchivedPanel ? (
+                <ChevronDown className="h-3.5 w-3.5 mr-1" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t("tasks.showArchived")}
+            </Button>
+          </>
         )}
       </div>
+
+      {/* Archived boards panel — admin only. */}
+      {isAdmin && showArchivedPanel && (
+        <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-3">
+          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+            {t("tasks.archived.title")}
+          </p>
+          {loadingArchived && (
+            <p className="text-xs text-zinc-500 italic">
+              {t("common.loading")}…
+            </p>
+          )}
+          {!loadingArchived && archivedBoards.length === 0 && (
+            <p className="text-xs text-zinc-500 italic">
+              {t("tasks.archived.empty")}
+            </p>
+          )}
+          {!loadingArchived && archivedBoards.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {archivedBoards.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 opacity-80"
+                >
+                  {b.icon ? <span>{b.icon}</span> : null}
+                  <span className="text-sm text-zinc-300">{b.name}</span>
+                  <span className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500">
+                    {b.taskCount}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-emerald-300 hover:text-emerald-200"
+                    onClick={() => void restoreBoard(b.id)}
+                  >
+                    <ArchiveRestore className="h-3.5 w-3.5 mr-1" />
+                    {t("tasks.restoreBoard")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="p-3">

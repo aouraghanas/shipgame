@@ -17,19 +17,29 @@ import { logAudit } from "@/lib/audit";
  * Returns the list of boards visible to the caller. Lazy-seeds the
  * defaults on first hit so a fresh database produces a usable
  * workspace without manual setup.
+ *
+ * Query: `?archived=1` (admin only) lists archived boards instead of
+ * active ones, used to power the "Show archived" panel in the UI.
  */
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !canAccessTasks(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  await ensureDefaultBoards();
-
-  const userId = session.user?.id;
+  const showArchived = req.nextUrl.searchParams.get("archived") === "1";
   const admin = isTaskAdmin(session);
 
+  // Archived view is admin-only — managers don't need to see retired
+  // boards. Block early with a clear error.
+  if (showArchived && !admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!showArchived) await ensureDefaultBoards();
+
+  const userId = session.user?.id;
   const boards = await prisma.taskBoard.findMany({
-    where: { archived: false },
+    where: { archived: showArchived },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     include: {
       members: { select: { userId: true } },
@@ -57,6 +67,7 @@ export async function GET(_req: NextRequest) {
       sortOrder: b.sortOrder,
       taskCount: b._count.tasks,
       memberIds: b.members.map((m) => m.userId),
+      archived: b.archived,
     }))
   );
 }
