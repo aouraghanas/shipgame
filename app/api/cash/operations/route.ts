@@ -70,6 +70,28 @@ export async function POST(req: NextRequest) {
   if (!session || !canAccessAccounting(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  if (!session.user?.id) {
+    // Stale JWT (e.g. user signed in before id was added to the token).
+    return NextResponse.json(
+      { error: "Your session is missing a user id. Please sign out and sign back in." },
+      { status: 401 }
+    );
+  }
+
+  // Defensive: confirm the session user still exists in the DB. If an admin
+  // account was renamed/recreated, the JWT can outlive its User row and
+  // Prisma's foreign key on createdById will then fail with an opaque 500.
+  const me = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true },
+  });
+  if (!me) {
+    return NextResponse.json(
+      { error: "Your user account was not found. Please sign out and sign back in." },
+      { status: 401 }
+    );
+  }
+
   const body = await req.json();
   const parsed = cashOperationInputSchema.safeParse(body);
   if (!parsed.success) {
@@ -91,36 +113,51 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const created = await prisma.cashOperation.create({
-    data: {
+  try {
+    const created = await prisma.cashOperation.create({
+      data: {
+        type: row.type,
+        direction: row.direction,
+        occurredAt: row.occurredAt,
+        amount: row.amount,
+        currency: row.currency,
+        destAmount: row.destAmount,
+        destCurrency: row.destCurrency,
+        description: row.description,
+        note: row.note,
+        metadata: row.metadata as Prisma.InputJsonValue,
+        createdById: me.id,
+      },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+
+    await logAudit(
+      me.id,
+      me.name,
+      "cash.operation.create",
+      `${row.type} ${row.amount} ${row.currency}`
+    );
+
+    return NextResponse.json(
+      {
+        ...created,
+        amount: created.amount.toString(),
+        destAmount: created.destAmount?.toString() ?? null,
+      },
+      { status: 201 }
+    );
+  } catch (e) {
+    console.error("[cash.operations.POST] create failed", {
+      userId: me.id,
+      userName: me.name,
       type: row.type,
-      direction: row.direction,
-      occurredAt: row.occurredAt,
-      amount: row.amount,
       currency: row.currency,
-      destAmount: row.destAmount,
-      destCurrency: row.destCurrency,
-      description: row.description,
-      note: row.note,
-      metadata: row.metadata as Prisma.InputJsonValue,
-      createdById: session.user.id,
-    },
-    include: { createdBy: { select: { id: true, name: true } } },
-  });
-
-  await logAudit(
-    session.user.id,
-    session.user.name,
-    "cash.operation.create",
-    `${row.type} ${row.amount} ${row.currency}`
-  );
-
-  return NextResponse.json(
-    {
-      ...created,
-      amount: created.amount.toString(),
-      destAmount: created.destAmount?.toString() ?? null,
-    },
-    { status: 201 }
-  );
+      err: e instanceof Error ? { message: e.message, name: e.name } : String(e),
+    });
+    const message = e instanceof Error ? e.message : "Unknown error";
+    return NextResponse.json(
+      { error: `Failed to save operation: ${message}` },
+      { status: 500 }
+    );
+  }
 }

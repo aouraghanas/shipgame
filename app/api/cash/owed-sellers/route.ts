@@ -37,6 +37,13 @@ export async function POST(req: NextRequest) {
   if (!session || !canAccessAccounting(session))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  if (!session.user?.id) {
+    return NextResponse.json(
+      { error: "Your session is missing a user id. Please sign out and sign back in." },
+      { status: 401 }
+    );
+  }
+
   const body = await req.json();
   const parsed = postSchema.safeParse(body);
   if (!parsed.success)
@@ -51,26 +58,39 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Upsert by name so re-adding the same seller updates instead of erroring.
-  const row = await prisma.owedSeller.upsert({
-    where: { name: parsed.data.name.trim() },
-    create: {
-      name: parsed.data.name.trim(),
-      amount: parsed.data.amount,
-      currency,
-    },
-    update: {
-      amount: parsed.data.amount,
-      currency,
-    },
-  });
+  try {
+    // Upsert by name so re-adding the same seller updates instead of erroring.
+    const row = await prisma.owedSeller.upsert({
+      where: { name: parsed.data.name.trim() },
+      create: {
+        name: parsed.data.name.trim(),
+        amount: parsed.data.amount,
+        currency,
+      },
+      update: {
+        amount: parsed.data.amount,
+        currency,
+      },
+    });
 
-  await logAudit(
-    session.user.id,
-    session.user.name,
-    "cash.owed.upsert",
-    `Owed seller ${row.name} = ${row.amount} ${row.currency}`
-  );
+    await logAudit(
+      session.user.id,
+      session.user.name ?? "",
+      "cash.owed.upsert",
+      `Owed seller ${row.name} = ${row.amount} ${row.currency}`
+    );
 
-  return NextResponse.json({ ...row, amount: row.amount.toString() }, { status: 201 });
+    return NextResponse.json({ ...row, amount: row.amount.toString() }, { status: 201 });
+  } catch (e) {
+    console.error("[cash.owed-sellers.POST] failed", {
+      userId: session.user.id,
+      name: parsed.data.name,
+      err: e instanceof Error ? { message: e.message, name: e.name } : String(e),
+    });
+    const message = e instanceof Error ? e.message : "Unknown error";
+    return NextResponse.json(
+      { error: `Failed to save seller: ${message}` },
+      { status: 500 }
+    );
+  }
 }

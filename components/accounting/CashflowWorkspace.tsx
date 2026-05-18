@@ -198,7 +198,19 @@ export function CashflowWorkspace() {
         await reload();
       } else {
         const j = await r.json().catch(() => ({}));
-        setMsg(j?.error?.message || JSON.stringify(j?.error) || t("cash.toast.failed"));
+        // API returns either { error: "string" } or { error: { fieldErrors, formErrors } }
+        // from zod; surface whichever is most useful instead of the generic toast.
+        const err = j?.error;
+        let detail = "";
+        if (typeof err === "string") detail = err;
+        else if (err && typeof err === "object") {
+          try {
+            detail = JSON.stringify(err);
+          } catch {
+            detail = "";
+          }
+        }
+        setMsg(detail || t("cash.toast.failed"));
       }
     } finally {
       setSubmitting(false);
