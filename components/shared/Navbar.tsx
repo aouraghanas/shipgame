@@ -18,6 +18,7 @@ import {
   MessageSquareMore,
   Landmark,
   Ticket,
+  Kanban,
   type LucideIcon,
 } from "lucide-react";
 import { ThemeSwitch } from "./ThemeSwitch";
@@ -30,6 +31,7 @@ type NavLink = { href: string; icon: LucideIcon; labelKey: string };
 const ADMIN_LINKS: NavLink[] = [
   { href: "/admin", icon: LayoutDashboard, labelKey: "nav.dashboard" },
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
   { href: "/admin/users", icon: Users, labelKey: "nav.users" },
   { href: "/admin/rewards", icon: Gift, labelKey: "nav.rewards" },
   { href: "/admin/activity", icon: Activity, labelKey: "nav.activity" },
@@ -43,6 +45,7 @@ const ADMIN_LINKS: NavLink[] = [
 
 const ACCOUNTANT_LINKS: NavLink[] = [
   { href: "/accounting", icon: Landmark, labelKey: "nav.accounting" },
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
 ];
 
@@ -52,6 +55,7 @@ const LIBYAN_ACCOUNTANT_LINKS: NavLink[] = [
 
 const SOURCING_LINKS: NavLink[] = [
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
   { href: "/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
   { href: "/ops-reports", icon: BarChart2, labelKey: "nav.activityIntel" },
   { href: "/profile", icon: User, labelKey: "nav.profile" },
@@ -60,6 +64,7 @@ const SOURCING_LINKS: NavLink[] = [
 const MANAGER_LINKS: NavLink[] = [
   { href: "/dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
   { href: "/leaderboard", icon: Trophy, labelKey: "nav.leaderboard" },
   { href: "/activity", icon: Activity, labelKey: "nav.activity" },
   { href: "/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },

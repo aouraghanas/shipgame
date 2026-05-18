@@ -2,11 +2,11 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-/** Sourcing agents: tickets + recommendations + read-only activity intel + profile only (no leaderboard). */
-const SOURCING_PAGE_PREFIXES = ["/tickets", "/feedback", "/ops-reports", "/profile"];
+/** Sourcing agents: tickets + tasks + recommendations + read-only activity intel + profile only (no leaderboard). */
+const SOURCING_PAGE_PREFIXES = ["/tickets", "/tasks", "/feedback", "/ops-reports", "/profile"];
 
-/** Accountants: accounting app + tickets + profile. */
-const ACCOUNTANT_PAGE_PREFIXES = ["/tickets", "/accounting", "/profile"];
+/** Accountants: accounting app + tickets + tasks + profile. */
+const ACCOUNTANT_PAGE_PREFIXES = ["/tickets", "/tasks", "/accounting", "/profile"];
 
 /** Libyan accountants: accounting app only (LYD-scoped). */
 const LIBYAN_ACCOUNTANT_PAGE_PREFIXES = ["/accounting"];
