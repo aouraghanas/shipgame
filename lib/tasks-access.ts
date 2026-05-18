@@ -6,6 +6,8 @@
  *   - MANAGER            → can view/edit boards visible to them
  *   - SOURCING_AGENT     → same as MANAGER
  *   - ACCOUNTANT         → same as MANAGER
+ *   - TASK_AGENT         → tasks-only role; same board permissions as MANAGER
+ *                          but routed exclusively to /tasks elsewhere
  *   - SCREEN, LIBYAN_*   → no access
  *
  * Board visibility:
@@ -18,7 +20,13 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import type { Role, TaskBoard, TaskBoardVisibility } from "@prisma/client";
 
-const TASK_ROLES: Role[] = ["ADMIN", "MANAGER", "SOURCING_AGENT", "ACCOUNTANT"];
+const TASK_ROLES: Role[] = [
+  "ADMIN",
+  "MANAGER",
+  "SOURCING_AGENT",
+  "ACCOUNTANT",
+  "TASK_AGENT",
+];
 
 export function canAccessTasks(session: Session | null): boolean {
   if (!session?.user?.role) return false;

@@ -16,6 +16,7 @@ enum Role {
   ACCOUNTANT
   SOURCING_AGENT
   LIBYAN_ACCOUNTANT
+  TASK_AGENT
 }
 
 enum Status {

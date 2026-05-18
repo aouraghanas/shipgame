@@ -53,6 +53,10 @@ const LIBYAN_ACCOUNTANT_LINKS: NavLink[] = [
   { href: "/accounting", icon: Landmark, labelKey: "nav.accounting.lyd" },
 ];
 
+const TASK_AGENT_LINKS: NavLink[] = [
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
+];
+
 const SOURCING_LINKS: NavLink[] = [
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
   { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
@@ -86,7 +90,9 @@ export function Navbar() {
           ? LIBYAN_ACCOUNTANT_LINKS
           : role === "SOURCING_AGENT"
             ? SOURCING_LINKS
-            : MANAGER_LINKS;
+            : role === "TASK_AGENT"
+              ? TASK_AGENT_LINKS
+              : MANAGER_LINKS;
 
   const homeHref =
     role === "ADMIN"
@@ -95,7 +101,9 @@ export function Navbar() {
         ? "/accounting"
         : role === "SOURCING_AGENT"
           ? "/tickets"
-          : "/dashboard";
+          : role === "TASK_AGENT"
+            ? "/tasks"
+            : "/dashboard";
 
   return (
     <nav className="navbar-shipeh border-b border-zinc-800 bg-zinc-950 sticky top-0 z-30">

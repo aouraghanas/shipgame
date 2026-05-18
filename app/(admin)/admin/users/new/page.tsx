@@ -97,6 +97,7 @@ export default function NewUserPage() {
                   <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                   <SelectItem value="LIBYAN_ACCOUNTANT">Libyan accountant (LYD only)</SelectItem>
                   <SelectItem value="SOURCING_AGENT">Sourcing agent</SelectItem>
+                  <SelectItem value="TASK_AGENT">Task agent (tasks only)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

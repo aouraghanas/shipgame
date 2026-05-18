@@ -10,7 +10,8 @@ export type Role =
   | "SOURCING_AGENT"
   | "ACCOUNTANT"
   | "LIBYAN_ACCOUNTANT"
-  | "SCREEN";
+  | "SCREEN"
+  | "TASK_AGENT";
 
 export interface AuthUser {
   id: string;

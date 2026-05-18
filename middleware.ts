@@ -11,6 +11,9 @@ const ACCOUNTANT_PAGE_PREFIXES = ["/tickets", "/tasks", "/accounting", "/profile
 /** Libyan accountants: accounting app only (LYD-scoped). */
 const LIBYAN_ACCOUNTANT_PAGE_PREFIXES = ["/accounting"];
 
+/** Task agents: the task manager only — that's their whole app. */
+const TASK_AGENT_PAGE_PREFIXES = ["/tasks"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -44,6 +47,15 @@ export async function middleware(req: NextRequest) {
     );
     if (!allowed) {
       return NextResponse.redirect(new URL("/accounting", req.url));
+    }
+  }
+
+  if (token?.role === "TASK_AGENT") {
+    const allowed = TASK_AGENT_PAGE_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/tasks", req.url));
     }
   }
 
