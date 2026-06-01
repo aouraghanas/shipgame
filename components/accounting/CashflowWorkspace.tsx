@@ -829,10 +829,21 @@ function FieldCurrency({
 }) {
   const t = useT();
   if (isLibyaOnly) {
+    // The Libyan-accountant role is locked to LYD. We render a visible read-only
+    // display PLUS a hidden input that actually carries the value into FormData.
+    // Using `disabled` on the visible input would silently exclude it from the
+    // form submission, so the server would receive no `currency` field and
+    // reject the operation with a "currency required" / "must be LYD" error.
     return (
       <div className="space-y-1">
         <Label className="text-xs">{label ?? t("cash.field.currency")}</Label>
-        <Input name={name} value="LYD" readOnly disabled />
+        <input type="hidden" name={name} value="LYD" />
+        <div
+          className="flex h-10 w-full items-center rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-sm text-zinc-300"
+          aria-readonly="true"
+        >
+          LYD
+        </div>
       </div>
     );
   }
