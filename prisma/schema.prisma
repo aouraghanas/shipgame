@@ -17,6 +17,30 @@ enum Role {
   SOURCING_AGENT
   LIBYAN_ACCOUNTANT
   TASK_AGENT
+  CONFIRMATION_AGENT
+  CONFIRMATION_SCREEN
+}
+
+// Order-centric activity categories for call-center confirmation agents.
+enum ConfirmationActivityCategory {
+  CALL
+  CONFIRMATION
+  FOLLOW_UP
+  NO_ANSWER
+  RESCHEDULE
+  CANCELLED
+  OTHER
+}
+
+// Topics a confirmation agent can raise about orders/products/clients/prices.
+enum ConfirmationFeedbackTopic {
+  PRODUCT_QUALITY
+  PRICING
+  CLIENT_BEHAVIOR
+  DELIVERY_ISSUE
+  ORDER_DATA
+  CANCELLATION_TREND
+  OTHER
 }
 
 enum Status {
@@ -81,6 +105,9 @@ model User {
   notes              Note[]
   managerActivities  ManagerActivity[]
   sellerFeedbacks    SellerFeedback[]
+  confirmationEntries    ConfirmationEntry[]
+  confirmationActivities ConfirmationActivity[]
+  confirmationFeedbacks  ConfirmationFeedback[]
   feedbackReports    FeedbackReport[] @relation("FeedbackReportCreator")
   activityReports    ActivityReport[]   @relation("ActivityReportCreator")
   accountingLedgerEntries AccountingLedgerEntry[] @relation("LedgerCreator")
@@ -453,6 +480,77 @@ model MonthConfig {
   stockPointsMid    Int @default(2)
   stockPointsHigh   Int @default(3)
   leaderboardDesign String @default("CLASSIC")
+
+  /// ——— Confirmation-agent (call-center) scoring + rewards ———
+  /// Points = treated*confTreatedPoints + confirmed*confConfirmedPoints + delivered*confDeliveredPoints
+  confTreatedPoints   Decimal @default(1) @db.Decimal(12, 4)
+  confConfirmedPoints Decimal @default(5) @db.Decimal(12, 4)
+  confDeliveredPoints Decimal @default(20) @db.Decimal(12, 4)
+
+  confWinnerPlaces Int @default(3)
+  confLoserPlaces  Int @default(1)
+
+  confRewardText1     String?
+  confRewardText2     String?
+  confRewardText3     String?
+  confPunishmentText1 String?
+  confPunishmentText2 String?
+}
+
+// Confirmation agents enter a running cumulative snapshot (since the 1st of the
+// month) of orders treated / confirmed / delivered. One record per agent per
+// month; each save replaces the previous snapshot (upsert).
+model ConfirmationEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  monthKey  String   // YYYY-MM
+  treated   Int      @default(0)
+  confirmed Int      @default(0)
+  delivered Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+}
+
+// Order-centric activity log for confirmation agents (no seller — they only
+// know the order, call the client to confirm and follow up).
+model ConfirmationActivity {
+  id          String                       @id @default(cuid())
+  agentId     String
+  orderRef    String
+  description String
+  category    ConfirmationActivityCategory @default(CALL)
+  attachments String[]                     @default([])
+  createdAt   DateTime                     @default(now())
+
+  agent User @relation(fields: [agentId], references: [id])
+
+  @@index([agentId])
+  @@index([createdAt])
+  @@index([orderRef])
+}
+
+// Order/product/client recommendations from confirmation agents.
+model ConfirmationFeedback {
+  id              String                    @id @default(cuid())
+  agentId         String
+  orderRef        String?
+  topic           ConfirmationFeedbackTopic @default(OTHER)
+  sentiment       FeedbackSentiment         @default(NEUTRAL)
+  title           String?
+  details         String
+  suggestedAction String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  agent User @relation(fields: [agentId], references: [id])
+
+  @@index([agentId])
+  @@index([createdAt])
+  @@index([topic])
 }
 
 // ——— Support tickets (managers + admins create; sourcing team + admins handle) ———

@@ -14,6 +14,20 @@ const LIBYAN_ACCOUNTANT_PAGE_PREFIXES = ["/accounting"];
 /** Task agents: the task manager only — that's their whole app. */
 const TASK_AGENT_PAGE_PREFIXES = ["/tasks"];
 
+/** Confirmation agents (call center): their own dashboard/leaderboard/activity/feedback + tickets + tasks + profile. */
+const CONFIRMATION_AGENT_PAGE_PREFIXES = [
+  "/confirmation",
+  "/confirmation-leaderboard",
+  "/confirmation-activity",
+  "/confirmation-feedback",
+  "/tickets",
+  "/tasks",
+  "/profile",
+];
+
+/** Confirmation screen: the Libya call-center TV leaderboard only. */
+const CONFIRMATION_SCREEN_PAGE_PREFIXES = ["/confirmation-screen"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -56,6 +70,24 @@ export async function middleware(req: NextRequest) {
     );
     if (!allowed) {
       return NextResponse.redirect(new URL("/tasks", req.url));
+    }
+  }
+
+  if (token?.role === "CONFIRMATION_AGENT") {
+    const allowed = CONFIRMATION_AGENT_PAGE_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/confirmation", req.url));
+    }
+  }
+
+  if (token?.role === "CONFIRMATION_SCREEN") {
+    const allowed = CONFIRMATION_SCREEN_PAGE_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
+    if (!allowed) {
+      return NextResponse.redirect(new URL("/confirmation-screen", req.url));
     }
   }
 

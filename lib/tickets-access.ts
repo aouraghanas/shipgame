@@ -3,12 +3,24 @@ import type { SupportTicket, SupportTicketRecipient, SupportTicketStatus } from 
 
 export function canUseTicketsApp(session: Session | null): boolean {
   const r = session?.user?.role;
-  return r === "MANAGER" || r === "ADMIN" || r === "SOURCING_AGENT" || r === "ACCOUNTANT";
+  return (
+    r === "MANAGER" ||
+    r === "ADMIN" ||
+    r === "SOURCING_AGENT" ||
+    r === "ACCOUNTANT" ||
+    r === "CONFIRMATION_AGENT"
+  );
 }
 
 export function canCreateTicket(session: Session | null): boolean {
   const r = session?.user?.role;
-  return r === "MANAGER" || r === "ADMIN" || r === "SOURCING_AGENT" || r === "ACCOUNTANT";
+  return (
+    r === "MANAGER" ||
+    r === "ADMIN" ||
+    r === "SOURCING_AGENT" ||
+    r === "ACCOUNTANT" ||
+    r === "CONFIRMATION_AGENT"
+  );
 }
 
 export function canViewTicket(
@@ -17,7 +29,7 @@ export function canViewTicket(
 ): boolean {
   const r = session.user.role;
   if (r === "ADMIN") return true;
-  if (r === "MANAGER") {
+  if (r === "MANAGER" || r === "CONFIRMATION_AGENT") {
     return ticket.createdById === session.user.id || ticket.assigneeId === session.user.id;
   }
   /** Full queue read for triage; workflow/meta still use canManageTicketWorkflow / canEditTicketMeta. */

@@ -106,8 +106,15 @@ export default function TicketsPage() {
   const role = session?.user?.role;
   const t = useT();
   const canCreate =
-    role === "MANAGER" || role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
-  const sellerOptional = role === "SOURCING_AGENT" || role === "ACCOUNTANT";
+    role === "MANAGER" ||
+    role === "ADMIN" ||
+    role === "SOURCING_AGENT" ||
+    role === "ACCOUNTANT" ||
+    role === "CONFIRMATION_AGENT";
+  const sellerOptional =
+    role === "SOURCING_AGENT" ||
+    role === "ACCOUNTANT" ||
+    role === "CONFIRMATION_AGENT";
   const canFilterByCreator =
     role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
 
@@ -225,7 +232,7 @@ export default function TicketsPage() {
   }, []);
 
   useEffect(() => {
-    if (!role || !["ADMIN", "MANAGER", "SOURCING_AGENT", "ACCOUNTANT"].includes(role)) return;
+    if (!role || !["ADMIN", "MANAGER", "SOURCING_AGENT", "ACCOUNTANT", "CONFIRMATION_AGENT"].includes(role)) return;
     void fetch("/api/tickets/assignable-users")
       .then((r) => (r.ok ? r.json() : []))
       .then(setAssignees);

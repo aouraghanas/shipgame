@@ -18,6 +18,8 @@ const createUserSchema = z.object({
     "SOURCING_AGENT",
     "LIBYAN_ACCOUNTANT",
     "TASK_AGENT",
+    "CONFIRMATION_AGENT",
+    "CONFIRMATION_SCREEN",
   ]),
 });
 

@@ -4,13 +4,23 @@ import { redirect } from "next/navigation";
 import { Navbar } from "@/components/shared/Navbar";
 import { NotificationBar } from "@/components/shared/NotificationBar";
 
-export default async function ManagerLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Layout for the call-center confirmation-agent app
+ * (/confirmation, /confirmation-leaderboard, /confirmation-activity,
+ * /confirmation-feedback). Admins may also browse these pages.
+ */
+export default async function ConfirmationLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  // Accountants: route allowlist in middleware (tickets + accounting + profile).
-  // Admins can also access manager pages (leaderboard view)
-  if (session.user.role === "SCREEN") redirect("/screen");
-  if (session.user.role === "CONFIRMATION_SCREEN") redirect("/confirmation-screen");
+
+  const role = session.user.role;
+  if (role !== "CONFIRMATION_AGENT" && role !== "ADMIN") {
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950">

@@ -27,6 +27,8 @@ export default function UsersPage() {
     if (role === "ACCOUNTANT") return "outline" as const;
     if (role === "SOURCING_AGENT") return "default" as const;
     if (role === "TASK_AGENT") return "outline" as const;
+    if (role === "CONFIRMATION_AGENT") return "default" as const;
+    if (role === "CONFIRMATION_SCREEN") return "silver" as const;
     return "secondary" as const;
   };
 

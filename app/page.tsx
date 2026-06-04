@@ -14,5 +14,7 @@ export default async function RootPage() {
   if (role === "LIBYAN_ACCOUNTANT") redirect("/accounting");
   if (role === "SOURCING_AGENT") redirect("/tickets");
   if (role === "TASK_AGENT") redirect("/tasks");
+  if (role === "CONFIRMATION_AGENT") redirect("/confirmation");
+  if (role === "CONFIRMATION_SCREEN") redirect("/confirmation-screen");
   redirect("/dashboard");
 }

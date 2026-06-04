@@ -43,7 +43,7 @@ export function buildTicketListWhere(session: Session, q: TicketListQuery): Pris
     parts.push({ status: { not: "ARCHIVED" } });
   }
 
-  if (role === "MANAGER") {
+  if (role === "MANAGER" || role === "CONFIRMATION_AGENT") {
     parts.push({
       OR: [{ createdById: session.user.id }, { assigneeId: session.user.id }],
     });
@@ -59,8 +59,8 @@ export function buildTicketListWhere(session: Session, q: TicketListQuery): Pris
 
   if (q.createdById?.trim()) {
     const id = q.createdById.trim();
-    if (role === "MANAGER" && id !== session.user.id) {
-      // managers cannot scope to other creators
+    if ((role === "MANAGER" || role === "CONFIRMATION_AGENT") && id !== session.user.id) {
+      // managers / confirmation agents cannot scope to other creators
     } else {
       parts.push({ createdById: id });
     }

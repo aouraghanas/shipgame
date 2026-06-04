@@ -26,6 +26,7 @@ const TASK_ROLES: Role[] = [
   "SOURCING_AGENT",
   "ACCOUNTANT",
   "TASK_AGENT",
+  "CONFIRMATION_AGENT",
 ];
 
 export function canAccessTasks(session: Session | null): boolean {

@@ -17,7 +17,8 @@ export default async function TasksLayout({
     role === "MANAGER" ||
     role === "SOURCING_AGENT" ||
     role === "ACCOUNTANT" ||
-    role === "TASK_AGENT";
+    role === "TASK_AGENT" ||
+    role === "CONFIRMATION_AGENT";
   if (!allowed) redirect("/login");
 
   return (

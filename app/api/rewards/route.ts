@@ -26,6 +26,17 @@ const schema = z
     stockPointsMid: z.coerce.number().int().min(0).optional(),
     stockPointsHigh: z.coerce.number().int().min(0).optional(),
     leaderboardDesign: z.enum(["CLASSIC", "ARENA"]).optional(),
+    // Confirmation-agent (call-center) config
+    confTreatedPoints: z.coerce.number().min(0).optional(),
+    confConfirmedPoints: z.coerce.number().min(0).optional(),
+    confDeliveredPoints: z.coerce.number().min(0).optional(),
+    confWinnerPlaces: z.coerce.number().int().min(1).max(3).optional(),
+    confLoserPlaces: z.coerce.number().int().min(1).max(2).optional(),
+    confRewardText1: z.string().nullable().optional(),
+    confRewardText2: z.string().nullable().optional(),
+    confRewardText3: z.string().nullable().optional(),
+    confPunishmentText1: z.string().nullable().optional(),
+    confPunishmentText2: z.string().nullable().optional(),
   })
   .refine(
     (d) =>
@@ -79,6 +90,16 @@ export async function POST(req: NextRequest) {
       stockPointsMid: d.stockPointsMid ?? 2,
       stockPointsHigh: d.stockPointsHigh ?? 3,
       leaderboardDesign: d.leaderboardDesign ?? "CLASSIC",
+      confTreatedPoints: d.confTreatedPoints != null ? new Decimal(d.confTreatedPoints) : new Decimal(1),
+      confConfirmedPoints: d.confConfirmedPoints != null ? new Decimal(d.confConfirmedPoints) : new Decimal(5),
+      confDeliveredPoints: d.confDeliveredPoints != null ? new Decimal(d.confDeliveredPoints) : new Decimal(20),
+      confWinnerPlaces: d.confWinnerPlaces ?? 3,
+      confLoserPlaces: d.confLoserPlaces ?? 1,
+      confRewardText1: d.confRewardText1 ?? null,
+      confRewardText2: d.confRewardText2 ?? null,
+      confRewardText3: d.confRewardText3 ?? null,
+      confPunishmentText1: d.confPunishmentText1 ?? null,
+      confPunishmentText2: d.confPunishmentText2 ?? null,
     },
     update: {
       ...(d.rewardText !== undefined && { rewardText: d.rewardText }),
@@ -97,6 +118,16 @@ export async function POST(req: NextRequest) {
       ...(d.stockPointsMid !== undefined && { stockPointsMid: d.stockPointsMid }),
       ...(d.stockPointsHigh !== undefined && { stockPointsHigh: d.stockPointsHigh }),
       ...(d.leaderboardDesign !== undefined && { leaderboardDesign: d.leaderboardDesign }),
+      ...(d.confTreatedPoints !== undefined && { confTreatedPoints: new Decimal(d.confTreatedPoints) }),
+      ...(d.confConfirmedPoints !== undefined && { confConfirmedPoints: new Decimal(d.confConfirmedPoints) }),
+      ...(d.confDeliveredPoints !== undefined && { confDeliveredPoints: new Decimal(d.confDeliveredPoints) }),
+      ...(d.confWinnerPlaces !== undefined && { confWinnerPlaces: d.confWinnerPlaces }),
+      ...(d.confLoserPlaces !== undefined && { confLoserPlaces: d.confLoserPlaces }),
+      ...(d.confRewardText1 !== undefined && { confRewardText1: d.confRewardText1 }),
+      ...(d.confRewardText2 !== undefined && { confRewardText2: d.confRewardText2 }),
+      ...(d.confRewardText3 !== undefined && { confRewardText3: d.confRewardText3 }),
+      ...(d.confPunishmentText1 !== undefined && { confPunishmentText1: d.confPunishmentText1 }),
+      ...(d.confPunishmentText2 !== undefined && { confPunishmentText2: d.confPunishmentText2 }),
     },
   });
 

@@ -57,6 +57,16 @@ const TASK_AGENT_LINKS: NavLink[] = [
   { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
 ];
 
+const CONFIRMATION_LINKS: NavLink[] = [
+  { href: "/confirmation", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+  { href: "/confirmation-leaderboard", icon: Trophy, labelKey: "nav.leaderboard" },
+  { href: "/confirmation-activity", icon: Activity, labelKey: "nav.activity" },
+  { href: "/confirmation-feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
+  { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
+  { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
+  { href: "/profile", icon: User, labelKey: "nav.profile" },
+];
+
 const SOURCING_LINKS: NavLink[] = [
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
   { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
@@ -92,7 +102,9 @@ export function Navbar() {
             ? SOURCING_LINKS
             : role === "TASK_AGENT"
               ? TASK_AGENT_LINKS
-              : MANAGER_LINKS;
+              : role === "CONFIRMATION_AGENT"
+                ? CONFIRMATION_LINKS
+                : MANAGER_LINKS;
 
   const homeHref =
     role === "ADMIN"
@@ -103,7 +115,9 @@ export function Navbar() {
           ? "/tickets"
           : role === "TASK_AGENT"
             ? "/tasks"
-            : "/dashboard";
+            : role === "CONFIRMATION_AGENT"
+              ? "/confirmation"
+              : "/dashboard";
 
   return (
     <nav className="navbar-shipeh border-b border-zinc-800 bg-zinc-950 sticky top-0 z-30">

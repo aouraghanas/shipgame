@@ -20,7 +20,14 @@ export async function GET(_req: NextRequest) {
     where: {
       status: "ACTIVE",
       role: {
-        in: ["ADMIN", "MANAGER", "SOURCING_AGENT", "ACCOUNTANT", "TASK_AGENT"],
+        in: [
+          "ADMIN",
+          "MANAGER",
+          "SOURCING_AGENT",
+          "ACCOUNTANT",
+          "TASK_AGENT",
+          "CONFIRMATION_AGENT",
+        ],
       },
     },
     orderBy: [{ name: "asc" }],

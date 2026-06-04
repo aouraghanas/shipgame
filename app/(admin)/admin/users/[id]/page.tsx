@@ -84,6 +84,8 @@ export default function EditUserPage() {
                     <SelectItem value="LIBYAN_ACCOUNTANT">Libyan accountant (LYD only)</SelectItem>
                     <SelectItem value="SOURCING_AGENT">Sourcing agent</SelectItem>
                     <SelectItem value="TASK_AGENT">Task agent (tasks only)</SelectItem>
+                    <SelectItem value="CONFIRMATION_AGENT">Confirmation agent (call center)</SelectItem>
+                    <SelectItem value="CONFIRMATION_SCREEN">Confirmation screen (call-center TV)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

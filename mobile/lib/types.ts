@@ -11,7 +11,9 @@ export type Role =
   | "ACCOUNTANT"
   | "LIBYAN_ACCOUNTANT"
   | "SCREEN"
-  | "TASK_AGENT";
+  | "TASK_AGENT"
+  | "CONFIRMATION_AGENT"
+  | "CONFIRMATION_SCREEN";
 
 export interface AuthUser {
   id: string;

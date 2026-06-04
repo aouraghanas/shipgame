@@ -31,6 +31,17 @@ type FormState = {
   stockPointsLow: string;
   stockPointsMid: string;
   stockPointsHigh: string;
+  // Confirmation-agent (call-center) config
+  confTreatedPoints: string;
+  confConfirmedPoints: string;
+  confDeliveredPoints: string;
+  confWinnerPlaces: number;
+  confLoserPlaces: number;
+  confRewardText1: string;
+  confRewardText2: string;
+  confRewardText3: string;
+  confPunishmentText1: string;
+  confPunishmentText2: string;
 };
 
 const defaultForm = (): FormState => ({
@@ -48,11 +59,29 @@ const defaultForm = (): FormState => ({
   stockPointsLow: "1",
   stockPointsMid: "2",
   stockPointsHigh: "3",
+  confTreatedPoints: "1",
+  confConfirmedPoints: "5",
+  confDeliveredPoints: "20",
+  confWinnerPlaces: 3,
+  confLoserPlaces: 1,
+  confRewardText1: "",
+  confRewardText2: "",
+  confRewardText3: "",
+  confPunishmentText1: "",
+  confPunishmentText2: "",
 });
+
+/** Decimal fields arrive from the API as strings (or numbers); normalize to a plain string. */
+function decToStr(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "object" && "toString" in v) return (v as { toString: () => string }).toString();
+  return String(v);
+}
 
 export default function RewardsPage() {
   const monthKey = getCurrentMonthKey();
   const [form, setForm] = useState<FormState>(defaultForm);
+  const [tab, setTab] = useState<"managers" | "confirmation">("managers");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -83,6 +112,16 @@ export default function RewardsPage() {
           stockPointsLow: String(d.stockPointsLow ?? 1),
           stockPointsMid: String(d.stockPointsMid ?? 2),
           stockPointsHigh: String(d.stockPointsHigh ?? 3),
+          confTreatedPoints: String(decToStr(d.confTreatedPoints) ?? "1"),
+          confConfirmedPoints: String(decToStr(d.confConfirmedPoints) ?? "5"),
+          confDeliveredPoints: String(decToStr(d.confDeliveredPoints) ?? "20"),
+          confWinnerPlaces: d.confWinnerPlaces ?? 3,
+          confLoserPlaces: d.confLoserPlaces ?? 1,
+          confRewardText1: d.confRewardText1 ?? "",
+          confRewardText2: d.confRewardText2 ?? "",
+          confRewardText3: d.confRewardText3 ?? "",
+          confPunishmentText1: d.confPunishmentText1 ?? "",
+          confPunishmentText2: d.confPunishmentText2 ?? "",
         });
       })
       .finally(() => setLoading(false));
@@ -112,6 +151,16 @@ export default function RewardsPage() {
         stockPointsLow: Number(form.stockPointsLow),
         stockPointsMid: Number(form.stockPointsMid),
         stockPointsHigh: Number(form.stockPointsHigh),
+        confTreatedPoints: Number(form.confTreatedPoints),
+        confConfirmedPoints: Number(form.confConfirmedPoints),
+        confDeliveredPoints: Number(form.confDeliveredPoints),
+        confWinnerPlaces: form.confWinnerPlaces,
+        confLoserPlaces: form.confLoserPlaces,
+        confRewardText1: form.confRewardText1.trim() || null,
+        confRewardText2: form.confRewardText2.trim() || null,
+        confRewardText3: form.confRewardText3.trim() || null,
+        confPunishmentText1: form.confPunishmentText1.trim() || null,
+        confPunishmentText2: form.confPunishmentText2.trim() || null,
         rewardText: null,
         punishmentText: null,
       }),
@@ -128,7 +177,29 @@ export default function RewardsPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <p className="text-sm text-zinc-400">{formatMonthKey(monthKey)}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-400">{formatMonthKey(monthKey)}</p>
+        <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("managers")}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === "managers" ? "brand-keep bg-brand text-white" : "text-zinc-400 hover:text-zinc-100"
+            }`}
+          >
+            Account Managers
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("confirmation")}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === "confirmation" ? "brand-keep bg-brand text-white" : "text-zinc-400 hover:text-zinc-100"
+            }`}
+          >
+            Confirmation Agents
+          </button>
+        </div>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
@@ -136,6 +207,7 @@ export default function RewardsPage() {
         </div>
       ) : (
         <form onSubmit={handleSave} className="space-y-8">
+          <div className={tab === "managers" ? "space-y-8" : "hidden"}>
           <Card>
             <CardHeader>
               <CardTitle>Leaderboard design version</CardTitle>
@@ -341,6 +413,158 @@ export default function RewardsPage() {
               </p>
             </CardContent>
           </Card>
+          </div>
+
+          {/* ——— Confirmation agents (call center) ——— */}
+          <div className={tab === "confirmation" ? "space-y-8" : "hidden"}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-indigo-400">
+                  <Calculator className="h-5 w-5" /> Point rules — confirmation agents
+                </CardTitle>
+                <CardDescription>
+                  Points = orders treated × (treated pts) + confirmed × (confirmed pts) + delivered × (delivered pts).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Points per treated</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={form.confTreatedPoints}
+                      onChange={(e) => setForm((f) => ({ ...f, confTreatedPoints: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Points per confirmed</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={form.confConfirmedPoints}
+                      onChange={(e) => setForm((f) => ({ ...f, confConfirmedPoints: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Points per delivered</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={form.confDeliveredPoints}
+                      onChange={(e) => setForm((f) => ({ ...f, confDeliveredPoints: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500 mt-3">
+                  Example: 1 / 5 / 20 → a treated order = 1 pt, a confirmed = 5 pts, a delivered = 20 pts.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-400">
+                  <Trophy className="h-5 w-5" /> Winner display — confirmation agents
+                </CardTitle>
+                <CardDescription>
+                  How many top places show a reward message on the call-center leaderboard.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label>Show rewards on top…</Label>
+                  <Select
+                    value={String(form.confWinnerPlaces)}
+                    onValueChange={(v) => setForm((f) => ({ ...f, confWinnerPlaces: Number(v) }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1st place only</SelectItem>
+                      <SelectItem value="2">1st and 2nd</SelectItem>
+                      <SelectItem value="3">1st, 2nd, and 3rd</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>1st place — message</Label>
+                  <Textarea
+                    value={form.confRewardText1}
+                    onChange={(e) => setForm((f) => ({ ...f, confRewardText1: e.target.value }))}
+                    placeholder="e.g. Bonus for top confirmer…"
+                    rows={2}
+                  />
+                </div>
+                {form.confWinnerPlaces >= 2 && (
+                  <div className="space-y-2">
+                    <Label>2nd place — message</Label>
+                    <Textarea
+                      value={form.confRewardText2}
+                      onChange={(e) => setForm((f) => ({ ...f, confRewardText2: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                )}
+                {form.confWinnerPlaces >= 3 && (
+                  <div className="space-y-2">
+                    <Label>3rd place — message</Label>
+                    <Textarea
+                      value={form.confRewardText3}
+                      onChange={(e) => setForm((f) => ({ ...f, confRewardText3: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-400">
+                  <AlertTriangle className="h-5 w-5" /> Bottom ranks — confirmation agents
+                </CardTitle>
+                <CardDescription>
+                  Whether only the last place, or the last two, show the penalty text.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label>Show penalty on…</Label>
+                  <Select
+                    value={String(form.confLoserPlaces)}
+                    onValueChange={(v) => setForm((f) => ({ ...f, confLoserPlaces: Number(v) }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Last place only</SelectItem>
+                      <SelectItem value="2">Last two places</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Last place — message</Label>
+                  <Textarea
+                    value={form.confPunishmentText1}
+                    onChange={(e) => setForm((f) => ({ ...f, confPunishmentText1: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+                {form.confLoserPlaces >= 2 && (
+                  <div className="space-y-2">
+                    <Label>Second-to-last — message</Label>
+                    <Textarea
+                      value={form.confPunishmentText2}
+                      onChange={(e) => setForm((f) => ({ ...f, confPunishmentText2: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}
           {success && <p className="text-sm text-emerald-400">Saved.</p>}
