@@ -252,6 +252,7 @@ const en: Dict = {
   // pagination
   "pagination.prev": "Prev",
   "pagination.next": "Next",
+  "pagination.perPage": "Per page",
   "pagination.showing": "Showing {from}–{to} of {total}",
 
   // tasks (kanban)
@@ -575,6 +576,7 @@ const ar: Dict = {
   // pagination
   "pagination.prev": "السابق",
   "pagination.next": "التالي",
+  "pagination.perPage": "لكل صفحة",
   "pagination.showing": "عرض {from}–{to} من {total}",
 
   // tasks (kanban)

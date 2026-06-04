@@ -38,7 +38,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const OPERATIONS_PAGE_SIZE = 50;
+const OPERATIONS_PAGE_SIZE_OPTIONS = [10, 30, 50, 100] as const;
+const DEFAULT_OPERATIONS_PAGE_SIZE = 50;
 
 type Currency = "MAD" | "USD" | "LYD";
 type Direction = "REVENUE" | "EXPENSE" | "NEUTRAL";
@@ -174,6 +175,7 @@ export function CashflowWorkspace() {
   const [submitting, setSubmitting] = useState(false);
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_OPERATIONS_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOps, setTotalOps] = useState(0);
 
@@ -184,7 +186,7 @@ export function CashflowWorkspace() {
     const params = new URLSearchParams({
       paginated: "1",
       page: String(page),
-      pageSize: String(OPERATIONS_PAGE_SIZE),
+      pageSize: String(pageSize),
     });
     if (filter === "revenue") params.set("direction", "REVENUE");
     else if (filter === "expense") params.set("direction", "EXPENSE");
@@ -193,13 +195,13 @@ export function CashflowWorkspace() {
       params.set("type", filter);
     }
     return params.toString();
-  }, [filter, page]);
+  }, [filter, page, pageSize]);
 
-  // Reset to page 1 whenever the filter changes so we don't land on an empty
-  // page that no longer exists for the narrower query.
+  // Reset to page 1 whenever the filter or page size changes so we don't land
+  // on a page that no longer exists for the narrower/wider query.
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filter, pageSize]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -392,8 +394,8 @@ export function CashflowWorkspace() {
             <CardContent className="space-y-1.5 max-h-[560px] overflow-y-auto">
               {totalPages > 1 && (
                 <p className="text-[11px] text-zinc-500 px-1">
-                  Showing {(page - 1) * OPERATIONS_PAGE_SIZE + 1}–
-                  {(page - 1) * OPERATIONS_PAGE_SIZE + filteredOps.length} of {totalOps}
+                  Showing {(page - 1) * pageSize + 1}–
+                  {(page - 1) * pageSize + filteredOps.length} of {totalOps}
                 </p>
               )}
               {filteredOps.length === 0 && (
@@ -438,12 +440,32 @@ export function CashflowWorkspace() {
                 </div>
               ))}
 
-              <Pagination
-                page={page}
-                totalPages={totalPages}
-                onChange={(p) => setPage(p)}
-                className="mt-2"
-              />
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-zinc-500">{t("pagination.perPage")}</span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(v) => setPageSize(Number(v))}
+                  >
+                    <SelectTrigger className="h-8 w-[72px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPERATIONS_PAGE_SIZE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onChange={(p) => setPage(p)}
+                  className="border-0 pt-0 flex-1 min-w-[200px]"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
