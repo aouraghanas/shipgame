@@ -24,12 +24,16 @@ const decString = z.union([z.string(), z.number()]).transform((v) => String(v));
 
 const dateString = z.string().min(1);
 
+/** Optional evidence files (receipts/screenshots). Same shape for every op type. */
+const attachments = z.array(z.string().url()).max(10).optional();
+
 /** Per-type form schemas (mirror what the UI submits). */
 const addBalanceSchema = z.object({
   type: z.literal("ADD_BALANCE"),
   amount: decString,
   currency: currencyEnum,
   occurredAt: dateString,
+  attachments,
 });
 
 const fromDexSchema = z.object({
@@ -39,6 +43,7 @@ const fromDexSchema = z.object({
   fulfillmentFees: decString,
   confirmationFees: decString,
   occurredAt: dateString,
+  attachments,
 });
 
 const buySchema = z.object({
@@ -48,6 +53,7 @@ const buySchema = z.object({
   pricePerUnit: decString,
   currency: currencyEnum,
   occurredAt: dateString,
+  attachments,
 });
 
 const currencySwapSchema = z.object({
@@ -57,6 +63,7 @@ const currencySwapSchema = z.object({
   destCurrency: currencyEnum,
   destAmount: decString,
   occurredAt: dateString,
+  attachments,
 });
 
 const salarySchema = z.object({
@@ -67,6 +74,7 @@ const salarySchema = z.object({
   currency: currencyEnum,
   occurredAt: dateString,
   note: z.string().max(2000).optional(),
+  attachments,
 });
 
 const officeSchema = z.object({
@@ -77,6 +85,7 @@ const officeSchema = z.object({
   currency: currencyEnum,
   occurredAt: dateString,
   note: z.string().max(2000).optional(),
+  attachments,
 });
 
 const withdrawSchema = z.object({
@@ -90,6 +99,7 @@ const withdrawSchema = z.object({
   method: z.enum(["Moroccan Bank", "Wise", "Payoneer", "Binance", "RedotPay"]),
   fees: decString,
   occurredAt: dateString,
+  attachments,
 });
 
 const otherSchema = z.object({
@@ -99,6 +109,7 @@ const otherSchema = z.object({
   currency: currencyEnum,
   occurredAt: dateString,
   note: z.string().max(2000).optional(),
+  attachments,
 });
 
 export const cashOperationInputSchema = z.discriminatedUnion("type", [
@@ -125,6 +136,7 @@ export type CashOperationPersisted = {
   description: string;
   note: string | null;
   metadata: Record<string, unknown>;
+  attachments: string[];
 };
 
 function num(s: string): number {
@@ -134,6 +146,15 @@ function num(s: string): number {
 
 /** Convert a validated form payload into the row we'll persist. */
 export function buildOperationRow(input: CashOperationInput): CashOperationPersisted {
+  const row = buildOperationRowInner(input);
+  // Carry optional evidence files through to a dedicated column (every op type
+  // accepts an `attachments` array; default to none).
+  return { ...row, attachments: input.attachments ?? [] };
+}
+
+function buildOperationRowInner(
+  input: CashOperationInput
+): Omit<CashOperationPersisted, "attachments"> & { attachments?: string[] } {
   const occurredAt = new Date(`${input.occurredAt}T12:00:00`);
 
   switch (input.type) {

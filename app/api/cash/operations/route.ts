@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
         description: row.description,
         note: row.note,
         metadata: row.metadata as Prisma.InputJsonValue,
+        attachments: row.attachments,
         createdById: me.id,
       },
       include: { createdBy: { select: { id: true, name: true } } },

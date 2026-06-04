@@ -694,6 +694,8 @@ model CashOperation {
   description  String                  @db.Text
   note         String?                 @db.Text
   metadata     Json?
+  // Optional evidence files (receipts, screenshots) — public storage URLs.
+  attachments  String[]                @default([])
   createdById  String
   createdBy    User                    @relation("CashOpCreator", fields: [createdById], references: [id])
   createdAt    DateTime                @default(now())

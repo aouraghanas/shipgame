@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,14 @@ import {
   DollarSign,
   Handshake,
   Package,
+  Paperclip,
   Pencil,
   Receipt,
   ShoppingCart,
   Trash2,
   Users,
   Wallet,
+  X,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -75,6 +77,7 @@ type Operation = {
   destCurrency: Currency | null;
   description: string;
   note: string | null;
+  attachments: string[];
   createdBy: { id: string; name: string };
 };
 
@@ -458,6 +461,22 @@ export function CashflowWorkspace() {
                       {new Date(op.occurredAt).toLocaleDateString()} ·{" "}
                       {t(`cash.op.${op.type}`)} · {op.createdBy.name}
                     </p>
+                    {op.attachments?.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {op.attachments.map((url, i) => (
+                          <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[11px] text-brand hover:underline"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            {t("cash.evidence")} {i + 1}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-mono uppercase text-zinc-300">
@@ -563,8 +582,20 @@ function OperationForm({
   const t = useT();
   const direction = OP_DIRECTIONS[type];
 
+  // Optional evidence files (receipts/screenshots) shared by every op form.
+  // Held in component state and merged into the payload on submit, then reset
+  // whenever the selected operation type changes (the parent remounts this).
+  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+
+  const submit = (payload: Record<string, unknown>) =>
+    onSubmit({ ...payload, attachments: attachments.map((f) => f.url) });
+
   const submitVariant: "default" | "secondary" =
     direction === "REVENUE" ? "default" : direction === "EXPENSE" ? "default" : "secondary";
+
+  const evidenceField = (
+    <EvidenceUploader files={attachments} onChange={setAttachments} />
+  );
 
   const baseButton = (
     <Button
@@ -581,7 +612,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             amount: fd.amount,
             currency: fd.currency,
@@ -592,6 +623,7 @@ function OperationForm({
         <FieldNumber name="amount" label={t("cash.field.amount")} />
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -601,7 +633,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             totalRevenue: fd.totalRevenue,
             numberOfOrders: Number(fd.numberOfOrders),
@@ -616,6 +648,7 @@ function OperationForm({
         <FieldNumber name="fulfillmentFees" label={t("cash.field.fulfillmentFees")} />
         <FieldNumber name="confirmationFees" label={t("cash.field.confirmationFees")} />
         <FieldDate />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -625,7 +658,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             sku: fd.sku,
             quantity: Number(fd.quantity),
@@ -640,6 +673,7 @@ function OperationForm({
         <FieldNumber name="pricePerUnit" label={t("cash.field.pricePerUnit")} />
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -649,7 +683,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             originCurrency: fd.originCurrency,
             originAmount: fd.originAmount,
@@ -664,6 +698,7 @@ function OperationForm({
         <FieldCurrency name="destCurrency" label={t("cash.field.destCurrency")} isLibyaOnly={isLibyaOnly} />
         <FieldNumber name="destAmount" label={t("cash.field.destAmount")} />
         <FieldDate />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -673,7 +708,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             region: fd.region,
             employeeName: fd.employeeName,
@@ -690,6 +725,7 @@ function OperationForm({
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
         <FieldTextarea name="note" label={t("cash.field.note")} />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -699,7 +735,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             region: fd.region,
             motif: fd.motif,
@@ -728,6 +764,7 @@ function OperationForm({
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
         <FieldTextarea name="note" label={t("cash.field.note")} />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -737,7 +774,7 @@ function OperationForm({
     return (
       <SimpleForm
         onSubmit={(fd) =>
-          onSubmit({
+          submit({
             type,
             sellerName: fd.sellerName,
             amount: fd.amount,
@@ -766,6 +803,7 @@ function OperationForm({
         </div>
         <FieldNumber name="fees" label={t("cash.field.fees")} />
         <FieldDate />
+        {evidenceField}
         {baseButton}
       </SimpleForm>
     );
@@ -775,7 +813,7 @@ function OperationForm({
   return (
     <SimpleForm
       onSubmit={(fd) =>
-        onSubmit({
+        submit({
           type,
           sign: fd.sign,
           amount: fd.amount,
@@ -799,8 +837,91 @@ function OperationForm({
       <FieldCurrency isLibyaOnly={isLibyaOnly} />
       <FieldDate />
       <FieldTextarea name="note" label={t("cash.field.note")} />
+      {evidenceField}
       {baseButton}
     </SimpleForm>
+  );
+}
+
+type UploadedFile = { url: string; name: string; type: string };
+
+/** Optional evidence uploader shared by every cash-operation form. */
+function EvidenceUploader({
+  files,
+  onChange,
+}: {
+  files: UploadedFile[];
+  onChange: (files: UploadedFile[]) => void;
+}) {
+  const t = useT();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const list = Array.from(e.target.files ?? []);
+    if (!list.length) return;
+    setError("");
+    setUploading(true);
+    const results: UploadedFile[] = [];
+    for (const file of list) {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload-activity", { method: "POST", body: fd });
+      if (res.ok) {
+        results.push(await res.json());
+      } else {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(j.error ?? "Upload failed. Try a smaller file.");
+        break;
+      }
+    }
+    if (results.length) onChange([...files, ...results]);
+    setUploading(false);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">
+        {t("cash.field.evidence")} <span className="text-zinc-500">{t("common.optional")}</span>
+      </Label>
+      {files.length > 0 && (
+        <div className="space-y-1.5 mb-1">
+          {files.map((f, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs">
+              <Paperclip className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+              <span className="flex-1 truncate text-zinc-300">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => onChange(files.filter((_, j) => j !== i))}
+                className="text-zinc-500 hover:text-zinc-300"
+                aria-label={t("common.delete")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={`group relative min-h-10 w-full ${uploading ? "pointer-events-none opacity-50" : ""}`}>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+          onChange={handleFiles}
+          disabled={uploading}
+          className="absolute inset-0 z-10 h-full min-h-10 w-full cursor-pointer border-0 p-0 opacity-0 file:h-full file:w-full"
+          aria-label={t("cash.field.evidence")}
+        />
+        <div className="pointer-events-none flex min-h-10 w-full select-none items-center justify-center gap-2 rounded-md border border-zinc-700 bg-transparent px-3 text-xs font-medium text-zinc-100 transition-colors group-focus-within:border-zinc-600">
+          <Paperclip className="h-4 w-4 shrink-0" />
+          <span>{uploading ? t("common.saving") : t("cash.field.attachFiles")}</span>
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
   );
 }
 
