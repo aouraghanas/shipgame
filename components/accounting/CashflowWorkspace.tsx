@@ -172,6 +172,8 @@ export function CashflowWorkspace() {
   const [msg, setMsg] = useState("");
   const [selectedOp, setSelectedOp] = useState<OpType | null>(null);
   const [filter, setFilter] = useState<FilterId>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -194,14 +196,16 @@ export function CashflowWorkspace() {
     else if (filter === "SALARY" || filter === "OFFICE_EXPENSE" || filter === "WITHDRAW") {
       params.set("type", filter);
     }
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
     return params.toString();
-  }, [filter, page, pageSize]);
+  }, [filter, page, pageSize, dateFrom, dateTo]);
 
-  // Reset to page 1 whenever the filter or page size changes so we don't land
-  // on a page that no longer exists for the narrower/wider query.
+  // Reset to page 1 whenever the filter, page size, or date range changes so we
+  // don't land on a page that no longer exists for the narrower/wider query.
   useEffect(() => {
     setPage(1);
-  }, [filter, pageSize]);
+  }, [filter, pageSize, dateFrom, dateTo]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -389,6 +393,46 @@ export function CashflowWorkspace() {
                     {t(f.key)}
                   </button>
                 ))}
+              </div>
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wide text-zinc-500">
+                    {t("cash.filter.from")}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    max={dateTo || undefined}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-8 w-[150px] text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wide text-zinc-500">
+                    {t("cash.filter.to")}
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-8 w-[150px] text-xs"
+                  />
+                </div>
+                {(dateFrom || dateTo) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                  >
+                    {t("cash.filter.clear")}
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-1.5 max-h-[560px] overflow-y-auto">

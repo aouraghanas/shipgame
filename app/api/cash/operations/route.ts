@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
   const take = Math.min(Math.max(Number(sp.get("take") || "200"), 1), 500);
   const typeParam = sp.get("type");
   const directionParam = sp.get("direction");
+  const fromParam = sp.get("from");
+  const toParam = sp.get("to");
   const paginated = sp.get("paginated") === "1" || !!sp.get("page");
   const page = Math.max(1, Number(sp.get("page") || "1"));
   const pageSize = Math.min(200, Math.max(1, Number(sp.get("pageSize") || "50")));
@@ -53,6 +55,15 @@ export async function GET(req: NextRequest) {
   }
   if (directionParam && (ALL_DIRECTIONS as readonly string[]).includes(directionParam)) {
     where.direction = directionParam as CashOperationDirection;
+  }
+  // Date-range filter on occurredAt. A single day is expressed as from=to=YYYY-MM-DD;
+  // we span the whole local day so the noon-anchored occurredAt always falls inside.
+  const dateMatch = /^\d{4}-\d{2}-\d{2}$/;
+  if ((fromParam && dateMatch.test(fromParam)) || (toParam && dateMatch.test(toParam))) {
+    where.occurredAt = {
+      ...(fromParam && dateMatch.test(fromParam) ? { gte: new Date(`${fromParam}T00:00:00.000`) } : {}),
+      ...(toParam && dateMatch.test(toParam) ? { lte: new Date(`${toParam}T23:59:59.999`) } : {}),
+    };
   }
   if (scope) {
     // Libyan accountant: only show ops whose primary OR destination currency is LYD.

@@ -88,7 +88,7 @@ export function AccountingWorkspace() {
   const isLibyaOnly = role === "LIBYAN_ACCOUNTANT";
   const t = useT();
 
-  const [tab, setTab] = useState<"overview" | "ledger" | "cashflow" | "tools" | "ai" | "admin">("overview");
+  const [tab, setTab] = useState<"overview" | "ledger" | "cashflow" | "tools" | "ai" | "admin">("cashflow");
 
   // Default the whole platform to "All time" on load.
   const initial = useMemo(() => presetRange("all", { from: "", to: "" }), []);
@@ -408,9 +408,9 @@ export function AccountingWorkspace() {
       <div className="flex flex-wrap gap-1 rounded-lg bg-zinc-900 p-1">
         {(
           [
+            ["cashflow", "accounting.tabs.cashflow"],
             ["overview", "accounting.tabs.overview"],
             ["ledger", "accounting.tabs.ledger"],
-            ["cashflow", "accounting.tabs.cashflow"],
             ...(isLibyaOnly
               ? ([] as const)
               : ([
