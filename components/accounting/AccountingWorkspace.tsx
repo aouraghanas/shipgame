@@ -354,55 +354,62 @@ export function AccountingWorkspace() {
 
   const visibleCurrencies = (isLibyaOnly ? ["LYD"] : ["LYD", "USD", "MAD"]) as Array<"LYD" | "USD" | "MAD">;
 
+  // The Cash flow tab has its own date filter inside CashflowWorkspace, so the
+  // global date range here is dead space there. Only show it on the tabs that
+  // actually scope their data by this range (overview / ledger / AI report).
+  const showDateFilter = tab === "overview" || tab === "ledger" || tab === "ai";
+
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {PRESET_BUTTONS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => applyPreset(p.id)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                preset === p.id
-                  ? "brand-keep bg-brand text-white shadow-sm"
-                  : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              }`}
-            >
-              {t(p.key)}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs text-zinc-400">{t("common.from")}</Label>
-            <Input
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPreset("custom");
-              }}
-              className="w-40"
-            />
+      {showDateFilter && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PRESET_BUTTONS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  preset === p.id
+                    ? "brand-keep bg-brand text-white shadow-sm"
+                    : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                {t(p.key)}
+              </button>
+            ))}
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-zinc-400">{t("common.to")}</Label>
-            <Input
-              type="date"
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPreset("custom");
-              }}
-              className="w-40"
-            />
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-zinc-400">{t("common.from")}</Label>
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setPreset("custom");
+                }}
+                className="w-40"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-zinc-400">{t("common.to")}</Label>
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  setPreset("custom");
+                }}
+                className="w-40"
+              />
+            </div>
+            <Button type="button" variant="secondary" onClick={() => void loadSummary()} disabled={loading}>
+              {loading ? t("common.refreshing") : t("common.refresh")}
+            </Button>
           </div>
-          <Button type="button" variant="secondary" onClick={() => void loadSummary()} disabled={loading}>
-            {loading ? t("common.refreshing") : t("common.refresh")}
-          </Button>
         </div>
-      </div>
+      )}
       {msg && <p className="text-sm text-emerald-400">{msg}</p>}
 
       <div className="flex flex-wrap gap-1 rounded-lg bg-zinc-900 p-1">
