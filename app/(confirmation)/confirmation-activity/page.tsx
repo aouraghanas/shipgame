@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Paperclip, X, Plus, Package, Clock } from "lucide-react";
+import { Paperclip, X, Plus, Package, Clock, Search } from "lucide-react";
 import { Pagination } from "@/components/shared/Pagination";
 
 type UploadedFile = { url: string; name: string; type: string };
@@ -67,6 +67,10 @@ export default function ConfirmationActivityPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [orderRefInput, setOrderRefInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchOrderRef, setSearchOrderRef] = useState("");
 
   async function loadActivities(targetPage: number) {
     setLoading(true);
@@ -74,6 +78,8 @@ export default function ConfirmationActivityPage() {
       page: String(targetPage),
       pageSize: String(ACTIVITY_PAGE_SIZE),
     });
+    if (searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
+    if (searchOrderRef.trim()) params.set("orderRef", searchOrderRef.trim());
     const r = await fetch(`/api/confirmation-activities?${params}`);
     if (r.ok) {
       const data = await r.json();
@@ -86,7 +92,12 @@ export default function ConfirmationActivityPage() {
 
   useEffect(() => {
     void loadActivities(page);
-  }, [page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchKeyword, searchOrderRef]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, searchOrderRef]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -263,6 +274,34 @@ export default function ConfirmationActivityPage() {
               <span className="text-sm font-normal text-zinc-500 ml-1">({total})</span>
             )}
           </h2>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearchKeyword(searchInput);
+              setSearchOrderRef(orderRefInput);
+            }}
+            className="flex flex-col sm:flex-row gap-2 mb-4"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                className="h-9 pl-9"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search description…"
+              />
+            </div>
+            <Input
+              className="h-9 sm:w-44"
+              value={orderRefInput}
+              onChange={(e) => setOrderRefInput(e.target.value)}
+              placeholder="Order ID / ref"
+            />
+            <Button type="submit" variant="secondary" size="sm" className="h-9">
+              Search
+            </Button>
+          </form>
 
           {loading ? (
             <div className="flex justify-center py-16">

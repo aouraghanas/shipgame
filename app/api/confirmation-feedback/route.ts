@@ -30,6 +30,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agentId");
   const topic = searchParams.get("topic");
+  const orderRef = searchParams.get("orderRef")?.trim();
+  const keyword = searchParams.get("keyword")?.trim();
   const page = Math.max(1, Number(searchParams.get("page") || "1"));
   const pageSize = Math.min(200, Math.max(1, Number(searchParams.get("pageSize") || "50")));
 
@@ -41,6 +43,18 @@ export async function GET(req: NextRequest) {
   }
   if (topic && (TOPIC_VALUES as readonly string[]).includes(topic)) {
     where.topic = topic as (typeof TOPIC_VALUES)[number];
+  }
+  if (orderRef) {
+    where.orderRef = { contains: orderRef, mode: "insensitive" };
+  }
+  // Free-text keyword across title, details, suggested action, and order ref.
+  if (keyword) {
+    where.OR = [
+      { title: { contains: keyword, mode: "insensitive" } },
+      { details: { contains: keyword, mode: "insensitive" } },
+      { suggestedAction: { contains: keyword, mode: "insensitive" } },
+      { orderRef: { contains: keyword, mode: "insensitive" } },
+    ];
   }
 
   const [items, total] = await Promise.all([

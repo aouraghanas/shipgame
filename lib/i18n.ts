@@ -138,6 +138,7 @@ const en: Dict = {
   "tickets.filters.includeArchived": "Include archived",
   "tickets.filters.clear": "Clear filters",
   "tickets.filters.scopedHint": "Your tickets and items assigned to you.",
+  "tickets.search.placeholder": "Search title, description, seller…",
   "tickets.stats.active": "Active",
   "tickets.stats.activeHint": "open + progress + waiting",
   "tickets.stats.open": "Open",
@@ -459,6 +460,7 @@ const ar: Dict = {
   "tickets.subtitle":
     "قائمة الانتظار أولاً — صفّ حسب التاريخ أو الحالة أو الأولوية أو المُنشئ. الصفوف العاجلة مظلّلة بالأحمر للفت الانتباه. أرشف العناصر المنتهية للحفاظ على نظافة القائمة.",
   "tickets.queue": "قائمة الانتظار",
+  "tickets.search.placeholder": "ابحث في العنوان والوصف والبائع…",
   "tickets.filters": "الفلاتر",
   "tickets.filters.status": "الحالة",
   "tickets.filters.priority": "الأولوية",

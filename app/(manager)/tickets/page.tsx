@@ -25,7 +25,7 @@ import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobo
 import { TICKET_PRIORITIES, TICKET_RECIPIENTS, TICKET_STATUSES, TICKET_SUBJECTS } from "@/lib/ticket-constants";
 import { ticketRowClasses, ticketStatusBadgeClasses } from "@/lib/ticket-row-styles";
 import { cn } from "@/lib/utils";
-import { Plus, Filter, Inbox } from "lucide-react";
+import { Plus, Filter, Inbox, Search } from "lucide-react";
 import { useT } from "@/components/shared/I18nProvider";
 
 type TicketRow = {
@@ -75,6 +75,7 @@ function buildListQuery(params: {
   createdBy: string;
   dateFrom: string;
   dateTo: string;
+  keyword: string;
 }): string {
   const p = new URLSearchParams();
   p.set("take", "100");
@@ -84,6 +85,7 @@ function buildListQuery(params: {
   if (params.createdBy) p.set("createdBy", params.createdBy);
   if (params.dateFrom) p.set("dateFrom", params.dateFrom);
   if (params.dateTo) p.set("dateTo", params.dateTo);
+  if (params.keyword.trim()) p.set("keyword", params.keyword.trim());
   return p.toString();
 }
 
@@ -126,6 +128,10 @@ export default function TicketsPage() {
   const [filterCreatedBy, setFilterCreatedBy] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  // Split the typed value (searchInput) from the committed value (searchKeyword)
+  // so the list only refetches when the user submits, not on every keystroke.
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -156,8 +162,9 @@ export default function TicketsPage() {
       createdBy: filterCreatedBy,
       dateFrom: filterDateFrom,
       dateTo: filterDateTo,
+      keyword: searchKeyword,
     }),
-    [showArchived, filterStatus, filterPriority, filterCreatedBy, filterDateFrom, filterDateTo]
+    [showArchived, filterStatus, filterPriority, filterCreatedBy, filterDateFrom, filterDateTo, searchKeyword]
   );
 
   const summaryParams = useMemo(
@@ -245,6 +252,8 @@ export default function TicketsPage() {
     setFilterDateFrom("");
     setFilterDateTo("");
     setShowArchived(false);
+    setSearchInput("");
+    setSearchKeyword("");
   }
 
   async function createTicket(e: React.FormEvent) {
@@ -369,7 +378,28 @@ export default function TicketsPage() {
               {t("tickets.filters")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pt-0">
+          <CardContent className="space-y-4 pt-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setSearchKeyword(searchInput);
+              }}
+              className="flex gap-2"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  className="h-9 pl-9"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder={t("tickets.search.placeholder")}
+                />
+              </div>
+              <Button type="submit" variant="secondary" size="sm" className="h-9">
+                {t("common.search")}
+              </Button>
+            </form>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label className="text-xs text-zinc-400">{t("tickets.filters.status")}</Label>
               <Select value={filterStatus || "__all__"} onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}>
@@ -441,6 +471,7 @@ export default function TicketsPage() {
               <Button type="button" variant="secondary" size="sm" className="w-full sm:w-auto" onClick={clearFilters}>
                 {t("tickets.filters.clear")}
               </Button>
+            </div>
             </div>
           </CardContent>
         </Card>

@@ -9,6 +9,7 @@ export type TicketListQuery = {
   createdById?: string | null;
   dateFrom?: string | null;
   dateTo?: string | null;
+  keyword?: string | null;
 };
 
 function parseDayStart(isoDate: string): Date | null {
@@ -73,6 +74,22 @@ export function buildTicketListWhere(session: Session, q: TicketListQuery): Pris
   if (q.dateTo?.trim()) {
     const to = parseDayEnd(q.dateTo.trim());
     if (to) parts.push({ createdAt: { lte: to } });
+  }
+
+  // Free-text keyword: match across title, body, seller (linked or free text),
+  // resolution note, and the creator's name so a single box finds most tickets.
+  if (q.keyword?.trim()) {
+    const kw = q.keyword.trim();
+    parts.push({
+      OR: [
+        { title: { contains: kw, mode: "insensitive" } },
+        { description: { contains: kw, mode: "insensitive" } },
+        { sellerNameText: { contains: kw, mode: "insensitive" } },
+        { resolutionNote: { contains: kw, mode: "insensitive" } },
+        { seller: { name: { contains: kw, mode: "insensitive" } } },
+        { createdBy: { name: { contains: kw, mode: "insensitive" } } },
+      ],
+    });
   }
 
   return parts.length ? { AND: parts } : {};

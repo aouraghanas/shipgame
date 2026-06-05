@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { SellerCombobox, type Seller } from "@/components/activity/SellerCombobox";
 import { cn } from "@/lib/utils";
-import { Paperclip, X, Plus, User, Clock } from "lucide-react";
+import { Paperclip, X, Plus, User, Clock, Search } from "lucide-react";
 import { Pagination } from "@/components/shared/Pagination";
 
 type UploadedFile = { url: string; name: string; type: string };
@@ -66,6 +67,8 @@ export default function ActivityPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   useEffect(() => {
     fetch("/api/sellers").then((r) => r.json()).then(setSellers);
@@ -78,6 +81,7 @@ export default function ActivityPage() {
       page: String(targetPage),
       pageSize: String(ACTIVITY_PAGE_SIZE),
     });
+    if (searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
     const r = await fetch(`/api/manager-activities?${params}`);
     if (r.ok) {
       const data = await r.json();
@@ -88,9 +92,16 @@ export default function ActivityPage() {
     setLoading(false);
   }
 
+  // Refetch when paging or when a new search term is committed.
   useEffect(() => {
     void loadActivities(page);
-  }, [page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchKeyword]);
+
+  // A new search should always start at page 1.
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -273,6 +284,27 @@ export default function ActivityPage() {
               <span className="text-sm font-normal text-zinc-500 ml-1">({total})</span>
             )}
           </h2>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearchKeyword(searchInput);
+            }}
+            className="flex gap-2 mb-4"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                className="h-9 pl-9"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search activity description…"
+              />
+            </div>
+            <Button type="submit" variant="secondary" size="sm" className="h-9">
+              Search
+            </Button>
+          </form>
 
           {loading ? (
             <div className="flex justify-center py-16">

@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
     createdById: searchParams.get("createdBy"),
     dateFrom: searchParams.get("dateFrom"),
     dateTo: searchParams.get("dateTo"),
+    keyword: searchParams.get("keyword"),
   };
 
   const where = buildTicketListWhere(session, listQ);

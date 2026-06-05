@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquareMore, Plus, Clock } from "lucide-react";
+import { MessageSquareMore, Plus, Clock, Search } from "lucide-react";
 import { Pagination } from "@/components/shared/Pagination";
 
 type Recommendation = {
@@ -68,6 +68,8 @@ export default function ConfirmationFeedbackPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   async function load(targetPage: number) {
     setLoading(true);
@@ -75,6 +77,7 @@ export default function ConfirmationFeedbackPage() {
       page: String(targetPage),
       pageSize: String(PAGE_SIZE),
     });
+    if (searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
     const r = await fetch(`/api/confirmation-feedback?${params}`);
     if (r.ok) {
       const data = await r.json();
@@ -87,7 +90,12 @@ export default function ConfirmationFeedbackPage() {
 
   useEffect(() => {
     void load(page);
-  }, [page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchKeyword]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -224,6 +232,27 @@ export default function ConfirmationFeedbackPage() {
             My Recommendations
             {!loading && <span className="text-sm font-normal text-zinc-500 ml-1">({total})</span>}
           </h2>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearchKeyword(searchInput);
+            }}
+            className="flex gap-2 mb-4"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                className="h-9 pl-9"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search title, details, order ref…"
+              />
+            </div>
+            <Button type="submit" variant="secondary" size="sm" className="h-9">
+              Search
+            </Button>
+          </form>
 
           {loading ? (
             <div className="flex justify-center py-16">
