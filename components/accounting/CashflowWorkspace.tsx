@@ -23,6 +23,7 @@ import {
   Paperclip,
   Pencil,
   Receipt,
+  Search,
   Ship,
   ShoppingCart,
   Trash2,
@@ -174,6 +175,9 @@ export function CashflowWorkspace() {
   const [filter, setFilter] = useState<FilterId>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // Typed value vs committed value, so we only refetch on submit (not per key).
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -192,14 +196,15 @@ export function CashflowWorkspace() {
     if (filter !== "all") params.set("type", filter);
     if (dateFrom) params.set("from", dateFrom);
     if (dateTo) params.set("to", dateTo);
+    if (searchKeyword.trim()) params.set("keyword", searchKeyword.trim());
     return params.toString();
-  }, [filter, page, pageSize, dateFrom, dateTo]);
+  }, [filter, page, pageSize, dateFrom, dateTo, searchKeyword]);
 
-  // Reset to page 1 whenever the filter, page size, or date range changes so we
-  // don't land on a page that no longer exists for the narrower/wider query.
+  // Reset to page 1 whenever the filter, page size, date range, or search
+  // changes so we don't land on a page that no longer exists.
   useEffect(() => {
     setPage(1);
-  }, [filter, pageSize, dateFrom, dateTo]);
+  }, [filter, pageSize, dateFrom, dateTo, searchKeyword]);
 
   // The wallet cards follow the same date range as the transactions list so
   // both views describe the same slice of time.
@@ -441,6 +446,40 @@ export function CashflowWorkspace() {
                   </Button>
                 )}
               </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setSearchKeyword(searchInput);
+                }}
+                className="mt-2 flex gap-2"
+              >
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                  <Input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t("cash.search.placeholder")}
+                    className="h-8 pl-8 text-xs"
+                  />
+                </div>
+                <Button type="submit" variant="secondary" size="sm" className="h-8">
+                  {t("common.search")}
+                </Button>
+                {searchKeyword && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      setSearchInput("");
+                      setSearchKeyword("");
+                    }}
+                  >
+                    {t("cash.search.clear")}
+                  </Button>
+                )}
+              </form>
             </CardHeader>
             <CardContent className="space-y-1.5 max-h-[560px] overflow-y-auto">
               {totalPages > 1 && (

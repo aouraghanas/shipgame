@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
   const directionParam = sp.get("direction");
   const fromParam = sp.get("from");
   const toParam = sp.get("to");
+  const keyword = sp.get("keyword")?.trim();
   const paginated = sp.get("paginated") === "1" || !!sp.get("page");
   const page = Math.max(1, Number(sp.get("page") || "1"));
   const pageSize = Math.min(200, Math.max(1, Number(sp.get("pageSize") || "50")));
@@ -66,9 +67,26 @@ export async function GET(req: NextRequest) {
       ...(toParam && dateMatch.test(toParam) ? { lte: new Date(`${toParam}T23:59:59.999`) } : {}),
     };
   }
+  // Free-text keyword: match across the auto-generated description and the
+  // note (where admins often jot transaction-specific keywords). Combined with
+  // the scope filter below via AND so both constraints hold.
+  const keywordWhere: Prisma.CashOperationWhereInput | null = keyword
+    ? {
+        OR: [
+          { description: { contains: keyword, mode: "insensitive" } },
+          { note: { contains: keyword, mode: "insensitive" } },
+        ],
+      }
+    : null;
+
   if (scope) {
     // Libyan accountant: only show ops whose primary OR destination currency is LYD.
-    where.OR = [{ currency: scope }, { destCurrency: scope }];
+    const scopeWhere: Prisma.CashOperationWhereInput = {
+      OR: [{ currency: scope }, { destCurrency: scope }],
+    };
+    where.AND = keywordWhere ? [scopeWhere, keywordWhere] : [scopeWhere];
+  } else if (keywordWhere) {
+    where.AND = [keywordWhere];
   }
 
   if (paginated) {
