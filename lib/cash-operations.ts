@@ -51,6 +51,9 @@ const buySchema = z.object({
   sku: z.string().min(1).max(120),
   quantity: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   pricePerUnit: decString,
+  // Optional platform/payment fees (e.g. Alibaba). Only used by BUY_SELLER_STOCK,
+  // where it's added on top of quantity × pricePerUnit.
+  fees: decString.optional(),
   currency: currencyEnum,
   occurredAt: dateString,
   attachments,
@@ -201,7 +204,10 @@ function buildOperationRowInner(
     case "BUY_COD_PRODUCT":
     case "BUY_SELLER_STOCK":
     case "SELLER_PAY_STOCK": {
-      const total = num(input.pricePerUnit) * (input.quantity || 0);
+      const goods = num(input.pricePerUnit) * (input.quantity || 0);
+      // Platform/payment fees only apply to seller-stock sourcing (Alibaba etc.).
+      const fees = input.type === "BUY_SELLER_STOCK" ? num(input.fees ?? "0") : 0;
+      const total = goods + fees;
       const direction: CashOperationDirection =
         input.type === "SELLER_PAY_STOCK" ? "NEUTRAL" : "EXPENSE";
       const verb =
@@ -210,6 +216,7 @@ function buildOperationRowInner(
           : input.type === "BUY_SELLER_STOCK"
             ? "Buy seller stock"
             : "Seller pays for stock";
+      const feeSuffix = fees > 0 ? ` + fees ${input.fees}` : "";
       return {
         type: input.type,
         direction,
@@ -218,9 +225,9 @@ function buildOperationRowInner(
         currency: input.currency,
         destAmount: null,
         destCurrency: null,
-        description: `${verb} · SKU ${input.sku} × ${input.quantity} @ ${input.pricePerUnit}`,
+        description: `${verb} · SKU ${input.sku} × ${input.quantity} @ ${input.pricePerUnit}${feeSuffix}`,
         note: null,
-        metadata: { ...input, totalAmount: total },
+        metadata: { ...input, goodsAmount: goods, fees, totalAmount: total },
       };
     }
 

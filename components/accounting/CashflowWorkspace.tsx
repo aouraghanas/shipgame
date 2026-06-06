@@ -659,6 +659,9 @@ function OperationForm({
   }
 
   if (type === "BUY_COD_PRODUCT" || type === "BUY_SELLER_STOCK" || type === "SELLER_PAY_STOCK") {
+    // Seller-stock sourcing can carry platform/payment fees (e.g. Alibaba),
+    // which are added on top of quantity × price.
+    const hasFees = type === "BUY_SELLER_STOCK";
     return (
       <SimpleForm
         onSubmit={(fd) =>
@@ -667,6 +670,7 @@ function OperationForm({
             sku: fd.sku,
             quantity: Number(fd.quantity),
             pricePerUnit: fd.pricePerUnit,
+            ...(hasFees ? { fees: fd.fees || "0" } : {}),
             currency: fd.currency,
             occurredAt: fd.occurredAt,
           })
@@ -675,6 +679,7 @@ function OperationForm({
         <FieldText name="sku" label={t("cash.field.sku")} />
         <FieldNumber name="quantity" label={t("cash.field.quantity")} step="1" />
         <FieldNumber name="pricePerUnit" label={t("cash.field.pricePerUnit")} />
+        {hasFees && <FieldNumber name="fees" label={t("cash.field.feesOptional")} required={false} />}
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
         {evidenceField}
@@ -1002,15 +1007,17 @@ function FieldNumber({
   name,
   label,
   step,
+  required = true,
 }: {
   name: string;
   label: string;
   step?: string;
+  required?: boolean;
 }) {
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input name={name} type="number" step={step ?? "0.001"} required />
+      <Input name={name} type="number" step={step ?? "0.001"} required={required} />
     </div>
   );
 }
