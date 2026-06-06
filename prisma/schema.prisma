@@ -670,6 +670,7 @@ enum CashOperationType {
   CURRENCY_SWAP       // neutral ⇄: subtract origin currency, add destination currency
   SALARY              // expense −: pay a salary
   OFFICE_EXPENSE      // expense −: office overhead
+  PAY_SHIPPING        // expense −: pay shipping for a sourcing arriving from China/Dubai
   WITHDRAW            // expense −: cash-out in USD (amount + fees subtracted)
   OTHER               // custom +/-: free-form
 }

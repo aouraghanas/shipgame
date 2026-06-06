@@ -23,6 +23,7 @@ import {
   Paperclip,
   Pencil,
   Receipt,
+  Ship,
   ShoppingCart,
   Trash2,
   Users,
@@ -54,6 +55,7 @@ type OpType =
   | "CURRENCY_SWAP"
   | "SALARY"
   | "OFFICE_EXPENSE"
+  | "PAY_SHIPPING"
   | "WITHDRAW"
   | "OTHER";
 
@@ -100,6 +102,7 @@ const OP_BUTTONS: { id: OpType; icon: LucideIcon; key: string }[] = [
   { id: "CURRENCY_SWAP", icon: ArrowLeftRight, key: "cash.op.CURRENCY_SWAP" },
   { id: "SALARY", icon: Users, key: "cash.op.SALARY" },
   { id: "OFFICE_EXPENSE", icon: Building2, key: "cash.op.OFFICE_EXPENSE" },
+  { id: "PAY_SHIPPING", icon: Ship, key: "cash.op.PAY_SHIPPING" },
   { id: "WITHDRAW", icon: Banknote, key: "cash.op.WITHDRAW" },
   { id: "OTHER", icon: Zap, key: "cash.op.OTHER" },
 ];
@@ -113,6 +116,7 @@ const OP_DIRECTIONS: Record<OpType, Direction> = {
   CURRENCY_SWAP: "NEUTRAL",
   SALARY: "EXPENSE",
   OFFICE_EXPENSE: "EXPENSE",
+  PAY_SHIPPING: "EXPENSE",
   WITHDRAW: "EXPENSE",
   OTHER: "EXPENSE",
 };
@@ -764,6 +768,38 @@ function OperationForm({
         <FieldCurrency isLibyaOnly={isLibyaOnly} />
         <FieldDate />
         <FieldTextarea name="note" label={t("cash.field.note")} />
+        {evidenceField}
+        {baseButton}
+      </SimpleForm>
+    );
+  }
+
+  if (type === "PAY_SHIPPING") {
+    return (
+      <SimpleForm
+        onSubmit={(fd) =>
+          submit({
+            type,
+            country: fd.country,
+            amount: fd.amount,
+            currency: fd.currency,
+            occurredAt: fd.occurredAt,
+          })
+        }
+      >
+        <div className="space-y-1">
+          <Label className="text-xs">{t("cash.field.country")}</Label>
+          <Select name="country" defaultValue="China">
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="China">{t("cash.country.china")}</SelectItem>
+              <SelectItem value="Dubai">{t("cash.country.dubai")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <FieldNumber name="amount" label={t("cash.field.amount")} />
+        <FieldCurrency isLibyaOnly={isLibyaOnly} />
+        <FieldDate />
         {evidenceField}
         {baseButton}
       </SimpleForm>

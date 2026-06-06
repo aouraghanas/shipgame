@@ -88,6 +88,15 @@ const officeSchema = z.object({
   attachments,
 });
 
+const payShippingSchema = z.object({
+  type: z.literal("PAY_SHIPPING"),
+  country: z.enum(["China", "Dubai"]),
+  amount: decString,
+  currency: currencyEnum,
+  occurredAt: dateString,
+  attachments,
+});
+
 const withdrawSchema = z.object({
   type: z.literal("WITHDRAW"),
   sellerName: z.string().min(1).max(200),
@@ -119,6 +128,7 @@ export const cashOperationInputSchema = z.discriminatedUnion("type", [
   currencySwapSchema,
   salarySchema,
   officeSchema,
+  payShippingSchema,
   withdrawSchema,
   otherSchema,
 ]);
@@ -253,6 +263,20 @@ function buildOperationRowInner(
         destCurrency: null,
         description: `Office · ${input.motif} (${input.region})`,
         note: input.note ?? null,
+        metadata: { ...input },
+      };
+
+    case "PAY_SHIPPING":
+      return {
+        type: "PAY_SHIPPING",
+        direction: "EXPENSE",
+        occurredAt,
+        amount: input.amount,
+        currency: input.currency,
+        destAmount: null,
+        destCurrency: null,
+        description: `Pay shipping · ${input.country} · ${input.amount} ${input.currency}`,
+        note: null,
         metadata: { ...input },
       };
 
