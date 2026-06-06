@@ -117,6 +117,10 @@ export default function TicketsPage() {
     role === "SOURCING_AGENT" ||
     role === "ACCOUNTANT" ||
     role === "CONFIRMATION_AGENT";
+  // Confirmation agents are call-center staff: they don't deal with sellers at
+  // all, only orders. Their create form swaps the seller picker for an order
+  // reference and is limited to order-relevant routing.
+  const isConfirmationAgent = role === "CONFIRMATION_AGENT";
   const canFilterByCreator =
     role === "ADMIN" || role === "SOURCING_AGENT" || role === "ACCOUNTANT";
 
@@ -139,6 +143,8 @@ export default function TicketsPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerFreeText, setSellerFreeText] = useState("");
+  // Order ID / reference — used in place of a seller for confirmation agents.
+  const [orderRef, setOrderRef] = useState("");
   const [assignees, setAssignees] = useState<Assignable[]>([]);
   const [msg, setMsg] = useState("");
   const [msgIsError, setMsgIsError] = useState(false);
@@ -274,8 +280,14 @@ export default function TicketsPage() {
       title: form.title.trim(),
       description: form.description.trim(),
     };
-    if (seller) body.sellerId = seller.id;
-    if (!seller && sellerFreeText.trim()) body.sellerNameText = sellerFreeText.trim();
+    if (isConfirmationAgent) {
+      // No seller for call-center staff; carry the order reference instead so
+      // it shows on the ticket row and is searchable.
+      if (orderRef.trim()) body.sellerNameText = `Order ${orderRef.trim()}`;
+    } else {
+      if (seller) body.sellerId = seller.id;
+      if (!seller && sellerFreeText.trim()) body.sellerNameText = sellerFreeText.trim();
+    }
     if (form.recipient === "SPECIFIC_USER") body.assigneeId = form.assigneeId || null;
 
     if (form.deadlineAt?.trim()) {
@@ -309,7 +321,7 @@ export default function TicketsPage() {
     setMsgIsError(false);
     setMsg("Ticket created.");
     setForm({
-      subject: role === "ACCOUNTANT" ? "ACCOUNTING" : "SOURCING",
+      subject: isConfirmationAgent ? "ORDERS" : role === "ACCOUNTANT" ? "ACCOUNTING" : "SOURCING",
       priority: "NORMAL",
       recipient: "ALL_ADMINS",
       assigneeId: "",
@@ -319,6 +331,7 @@ export default function TicketsPage() {
     });
     setSeller(null);
     setSellerFreeText("");
+    setOrderRef("");
     setNewTicketOpen(false);
     void load();
     void loadSummary();
@@ -341,6 +354,15 @@ export default function TicketsPage() {
               onClick={() => {
                 setMsg("");
                 setMsgIsError(false);
+                // Pick the most relevant default subject for the creator.
+                setForm((f) => ({
+                  ...f,
+                  subject: isConfirmationAgent
+                    ? "ORDERS"
+                    : role === "ACCOUNTANT"
+                      ? "ACCOUNTING"
+                      : f.subject,
+                }));
                 setNewTicketOpen(true);
               }}
             >
@@ -537,36 +559,51 @@ export default function TicketsPage() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={createTicket} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Seller {sellerOptional && <span className="text-zinc-500 font-normal">(optional)</span>}</Label>
-                <SellerCombobox
-                  sellers={sellers}
-                  value={seller}
-                  onChange={setSeller}
-                  onNewSeller={(s) => setSellers((p) => [...p, s].sort((a, b) => a.name.localeCompare(b.name)))}
-                />
-                <p className="text-xs text-zinc-500">
-                  {sellerOptional
-                    ? "Link a seller when the ticket is about a specific account; otherwise leave blank."
-                    : "Or describe the seller if not in the list:"}
-                </p>
-                {!sellerOptional && (
+              {isConfirmationAgent ? (
+                <div className="space-y-2">
+                  <Label>
+                    {t("tickets.form.orderRef")}{" "}
+                    <span className="text-zinc-500 font-normal">(optional)</span>
+                  </Label>
                   <Input
-                    value={sellerFreeText}
-                    onChange={(e) => setSellerFreeText(e.target.value)}
-                    placeholder="Seller name / phone / notes"
-                    disabled={!!seller}
+                    value={orderRef}
+                    onChange={(e) => setOrderRef(e.target.value)}
+                    placeholder={t("tickets.form.orderRefPlaceholder")}
                   />
-                )}
-                {sellerOptional && (
-                  <Input
-                    value={sellerFreeText}
-                    onChange={(e) => setSellerFreeText(e.target.value)}
-                    placeholder="Optional: seller name / notes"
-                    disabled={!!seller}
+                  <p className="text-xs text-zinc-500">{t("tickets.form.orderRefHint")}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Seller {sellerOptional && <span className="text-zinc-500 font-normal">(optional)</span>}</Label>
+                  <SellerCombobox
+                    sellers={sellers}
+                    value={seller}
+                    onChange={setSeller}
+                    onNewSeller={(s) => setSellers((p) => [...p, s].sort((a, b) => a.name.localeCompare(b.name)))}
                   />
-                )}
-              </div>
+                  <p className="text-xs text-zinc-500">
+                    {sellerOptional
+                      ? "Link a seller when the ticket is about a specific account; otherwise leave blank."
+                      : "Or describe the seller if not in the list:"}
+                  </p>
+                  {!sellerOptional && (
+                    <Input
+                      value={sellerFreeText}
+                      onChange={(e) => setSellerFreeText(e.target.value)}
+                      placeholder="Seller name / phone / notes"
+                      disabled={!!seller}
+                    />
+                  )}
+                  {sellerOptional && (
+                    <Input
+                      value={sellerFreeText}
+                      onChange={(e) => setSellerFreeText(e.target.value)}
+                      placeholder="Optional: seller name / notes"
+                      disabled={!!seller}
+                    />
+                  )}
+                </div>
+              )}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Subject</Label>
@@ -607,7 +644,9 @@ export default function TicketsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {TICKET_RECIPIENTS.map((r) => (
+                      {TICKET_RECIPIENTS.filter(
+                        (r) => !isConfirmationAgent || r.value !== "SOURCING_TEAM"
+                      ).map((r) => (
                         <SelectItem key={r.value} value={r.value}>
                           {r.label}
                         </SelectItem>
