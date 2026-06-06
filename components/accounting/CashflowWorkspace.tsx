@@ -201,11 +201,20 @@ export function CashflowWorkspace() {
     setPage(1);
   }, [filter, pageSize, dateFrom, dateTo]);
 
+  // The wallet cards follow the same date range as the transactions list so
+  // both views describe the same slice of time.
+  const balancesQuery = useMemo(() => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
+    return params.toString();
+  }, [dateFrom, dateTo]);
+
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [bRes, oRes, tRes] = await Promise.all([
-        fetch("/api/cash/balances"),
+        fetch(`/api/cash/balances${balancesQuery ? `?${balancesQuery}` : ""}`),
         fetch(`/api/cash/operations?${opsQuery}`),
         fetch("/api/cash/owed-total"),
       ]);
@@ -220,7 +229,7 @@ export function CashflowWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, [opsQuery]);
+  }, [opsQuery, balancesQuery]);
 
   useEffect(() => {
     void reload();
@@ -273,6 +282,10 @@ export function CashflowWorkspace() {
 
   const canEditOwed = isAdmin || role === "ACCOUNTANT" || isLibyaOnly;
 
+  // When a date range is active, the cards show the net movement for that
+  // period (matching the filtered transactions) rather than the live balance.
+  const dateFilterActive = Boolean(dateFrom || dateTo);
+
   return (
     <div className="space-y-6">
       {/* Balance cards */}
@@ -283,7 +296,7 @@ export function CashflowWorkspace() {
             tone={CURRENCY_TONE[cur]}
             label={t(`cash.balance.${cur}`)}
             amount={balances?.balances[cur] ?? "0"}
-            subtitle={t("cash.balance.subtitle")}
+            subtitle={dateFilterActive ? t("cash.balance.periodNet") : t("cash.balance.subtitle")}
           />
         ))}
         <OwedToSellersCard
