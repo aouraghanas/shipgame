@@ -27,6 +27,7 @@ const ALL_TYPES = [
   "CURRENCY_SWAP",
   "SALARY",
   "OFFICE_EXPENSE",
+  "PAY_SHIPPING",
   "WITHDRAW",
   "OTHER",
 ] as const satisfies readonly CashOperationType[];

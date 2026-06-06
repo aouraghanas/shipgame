@@ -59,14 +59,10 @@ type OpType =
   | "WITHDRAW"
   | "OTHER";
 
-type FilterId =
-  | "all"
-  | "revenue"
-  | "expense"
-  | "neutral"
-  | "SALARY"
-  | "OFFICE_EXPENSE"
-  | "WITHDRAW";
+// The transactions filter now mirrors the operation types one-to-one
+// ("all" plus every OpType), so admins can narrow the list to a single kind
+// of operation (Add balance, From DEX, Pay shipping, …).
+type FilterId = "all" | OpType;
 
 type Operation = {
   id: string;
@@ -123,12 +119,9 @@ const OP_DIRECTIONS: Record<OpType, Direction> = {
 
 const FILTER_BUTTONS: { id: FilterId; key: string }[] = [
   { id: "all", key: "cash.filter.all" },
-  { id: "revenue", key: "cash.filter.revenue" },
-  { id: "expense", key: "cash.filter.expense" },
-  { id: "neutral", key: "cash.filter.neutral" },
-  { id: "SALARY", key: "cash.filter.salary" },
-  { id: "OFFICE_EXPENSE", key: "cash.filter.office" },
-  { id: "WITHDRAW", key: "cash.filter.withdraw" },
+  // One pill per operation type, reusing the same labels as the operation
+  // buttons so the wording stays consistent across the page.
+  ...OP_BUTTONS.map((op) => ({ id: op.id as FilterId, key: op.key })),
 ];
 
 const CURRENCY_TONE: Record<Currency, string> = {
@@ -189,20 +182,14 @@ export function CashflowWorkspace() {
   const [totalOps, setTotalOps] = useState(0);
 
   // Build the query string for the operations list based on the active filter.
-  // The filter pills map to direction (revenue/expense/neutral) or specific
-  // type (SALARY/OFFICE_EXPENSE/WITHDRAW); everything else means "no filter".
+  // Each pill (other than "all") corresponds directly to an operation type.
   const opsQuery = useMemo(() => {
     const params = new URLSearchParams({
       paginated: "1",
       page: String(page),
       pageSize: String(pageSize),
     });
-    if (filter === "revenue") params.set("direction", "REVENUE");
-    else if (filter === "expense") params.set("direction", "EXPENSE");
-    else if (filter === "neutral") params.set("direction", "NEUTRAL");
-    else if (filter === "SALARY" || filter === "OFFICE_EXPENSE" || filter === "WITHDRAW") {
-      params.set("type", filter);
-    }
+    if (filter !== "all") params.set("type", filter);
     if (dateFrom) params.set("from", dateFrom);
     if (dateTo) params.set("to", dateTo);
     return params.toString();
