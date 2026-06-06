@@ -159,6 +159,8 @@ const en: Dict = {
   // leaderboard
   "leaderboard.title": "Leaderboard",
   "leaderboard.subtitle": "Current month rankings",
+  "leaderboard.tab.managers": "Account managers",
+  "leaderboard.tab.callCenter": "Call center",
   "leaderboard.competing": "{n} managers competing",
   "leaderboard.points": "points",
   "leaderboard.delivered": "Delivered",
@@ -499,6 +501,8 @@ const ar: Dict = {
   "tickets.emptyReadOnly": "عدّل الفلاتر أو اطلب من مدير الحساب فتح تذكرة.",
 
   "leaderboard.title": "لوحة المتصدّرين",
+  "leaderboard.tab.managers": "مدراء الحسابات",
+  "leaderboard.tab.callCenter": "مركز الاتصال",
   "leaderboard.subtitle": "تصنيفات الشهر الحالي",
   "leaderboard.competing": "{n} مديرًا يتنافسون",
   "leaderboard.points": "نقاط",

@@ -1,9 +1,9 @@
-import { LeaderboardView } from "@/components/leaderboard/LeaderboardView";
+import { LeaderboardSwitcher } from "@/components/leaderboard/LeaderboardSwitcher";
 
 export default function LeaderboardPage() {
   return (
     <div>
-      <LeaderboardView autoRefresh refreshInterval={15000} />
+      <LeaderboardSwitcher autoRefresh refreshInterval={15000} />
     </div>
   );
 }
