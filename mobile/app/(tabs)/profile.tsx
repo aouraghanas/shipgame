@@ -11,6 +11,7 @@ import { Button } from "@/components/Button";
 import { useAuth } from "@/lib/auth-context";
 import { useT, useI18n } from "@/lib/i18n-context";
 import { useTheme } from "@/lib/theme-context";
+import { registerPushToken } from "@/lib/push";
 
 export default function ProfileScreen() {
   const t = useT();
@@ -44,6 +45,12 @@ export default function ProfileScreen() {
         status = r.status;
       }
       setPushEnabled(status === "granted");
+      // Register the Expo push token with the backend so this device can
+      // receive server-sent notifications.
+      if (status === "granted") {
+        const token = await registerPushToken();
+        setPushEnabled(Boolean(token) || status === "granted");
+      }
     } finally {
       setPushBusy(false);
     }

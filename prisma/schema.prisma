@@ -118,6 +118,10 @@ model User {
   ticketAttachments       SupportTicketAttachment[] @relation("TicketAttachmentUploader")
   ticketComments          SupportTicketComment[]   @relation("TicketCommentAuthor")
   userNotifications       UserNotification[]       @relation("UserNotifications")
+  pushDevices             PushDevice[]             @relation("UserPushDevices")
+  campaignsCreated        NotificationCampaign[]   @relation("CampaignCreator")
+  campaignRecipients      CampaignRecipient[]      @relation("CampaignRecipientUser")
+  leaderboardRankState    LeaderboardRankState[]   @relation("RankStateUser")
 
   taskBoardMemberships    TaskBoardMember[]        @relation("TaskBoardMembers")
   tasksReported           Task[]                   @relation("TaskReporter")
@@ -734,6 +738,9 @@ enum UserNotificationKind {
   TASK_STATUS_CHANGED
   TASK_MENTION
   TASK_DUE_SOON
+  LEADERBOARD_RANK_UP
+  LEADERBOARD_RANK_DOWN
+  ANNOUNCEMENT          // manual campaign blast
   GENERIC
 }
 
@@ -747,11 +754,88 @@ model UserNotification {
   link      String?
   ticketId  String?
   taskId    String?
+  // Set when this row originated from a manual admin campaign (for analytics).
+  campaignId String?
   readAt    DateTime?
   createdAt DateTime              @default(now())
 
   @@index([userId, readAt])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([campaignId])
+}
+
+// ——— Push notifications: registered Expo devices + manual campaigns ———
+
+// One row per (user, device). The Expo push token is what we send to.
+model PushDevice {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("UserPushDevices", fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique          // Expo push token (ExponentPushToken[...])
+  platform   String?                   // ios | android
+  deviceName String?
+  enabled    Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum CampaignAudience {
+  ALL          // every active user
+  ROLES        // a set of roles
+  USERS        // an explicit set of users
+}
+
+// A manual notification blast composed by an admin. We keep it as a record so
+// we can show simple analytics (how many recipients, how many read).
+model NotificationCampaign {
+  id           String              @id @default(cuid())
+  title        String
+  body         String?             @db.Text
+  link         String?
+  audience     CampaignAudience    @default(ALL)
+  targetRoles  Role[]              @default([])
+  createdById  String
+  createdBy    User                @relation("CampaignCreator", fields: [createdById], references: [id])
+  recipientCount Int               @default(0)
+  pushSentCount  Int               @default(0)
+  createdAt    DateTime            @default(now())
+
+  recipients   CampaignRecipient[] @relation("CampaignRecipients")
+
+  @@index([createdAt(sort: Desc)])
+}
+
+// Per-recipient row for a campaign — lets us track read state for analytics
+// independently of the inbox UserNotification row.
+model CampaignRecipient {
+  id                 String               @id @default(cuid())
+  campaignId         String
+  campaign           NotificationCampaign @relation("CampaignRecipients", fields: [campaignId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User                 @relation("CampaignRecipientUser", fields: [userId], references: [id], onDelete: Cascade)
+  userNotificationId String?
+  pushed             Boolean              @default(false)
+  readAt             DateTime?
+  createdAt          DateTime             @default(now())
+
+  @@unique([campaignId, userId])
+  @@index([userId])
+}
+
+// Snapshot of each user's last-seen leaderboard rank, per board, so we can
+// detect rank changes between refreshes and notify the user.
+model LeaderboardRankState {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("RankStateUser", fields: [userId], references: [id], onDelete: Cascade)
+  board     String   // "managers" | "confirmation"
+  monthKey  String
+  rank      Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, board, monthKey])
 }
 
 // ——— Task manager (kanban boards, per-team workspaces) ———

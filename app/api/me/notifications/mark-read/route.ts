@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id, readAt: null },
       data: { readAt: now },
     });
+    // Mirror read state to campaign recipients for analytics.
+    await prisma.campaignRecipient
+      .updateMany({
+        where: { userId: session.user.id, readAt: null },
+        data: { readAt: now },
+      })
+      .catch(() => {});
     return NextResponse.json({ updated: r.count });
   }
 
@@ -44,6 +51,18 @@ export async function POST(req: NextRequest) {
     },
     data: { readAt: now },
   });
+
+  // Mirror read state to campaign recipients linked to these notifications.
+  await prisma.campaignRecipient
+    .updateMany({
+      where: {
+        userId: session.user.id,
+        readAt: null,
+        userNotificationId: { in: parsed.data.ids },
+      },
+      data: { readAt: now },
+    })
+    .catch(() => {});
 
   return NextResponse.json({ updated: r.count });
 }

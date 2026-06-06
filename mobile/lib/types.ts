@@ -89,3 +89,20 @@ export interface LeaderboardData {
   punishmentTexts: (string | null)[];
   leaderboardDesign: "CLASSIC" | "ARENA";
 }
+
+export interface UserNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  ticketId: string | null;
+  taskId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  items: UserNotification[];
+  unread: number;
+}

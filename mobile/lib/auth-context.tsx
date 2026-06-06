@@ -13,6 +13,7 @@ import {
   logout as logoutRequest,
 } from "./auth";
 import { getAuthToken } from "./storage";
+import { registerPushToken, unregisterPushToken } from "./push";
 import type { AuthUser } from "./types";
 
 interface Ctx {
@@ -33,7 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const [tok, cached] = await Promise.all([getAuthToken(), loadCachedUser()]);
-        if (tok && cached) setUser(cached);
+        if (tok && cached) {
+          setUser(cached);
+          // Returning user: refresh the push token registration in the
+          // background so server events keep reaching this device.
+          void registerPushToken();
+        }
       } catch {}
       setReady(true);
     })();
@@ -42,10 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     const u = await loginRequest(email, password);
     setUser(u);
+    void registerPushToken();
     return u;
   }, []);
 
   const signOut = useCallback(async () => {
+    await unregisterPushToken();
     await logoutRequest();
     setUser(null);
   }, []);

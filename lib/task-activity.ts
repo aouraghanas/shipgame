@@ -10,6 +10,7 @@ import {
   UserNotificationKind,
   type Prisma,
 } from "@prisma/client";
+import { sendPushToUsers } from "@/lib/push";
 
 export type RecordActivityInput = {
   taskId: string;
@@ -90,6 +91,11 @@ export async function notifyTaskAudience(
         taskId: input.taskId ?? null,
       })),
     });
+    void sendPushToUsers(ids, {
+      title: input.title,
+      body: input.body,
+      data: { kind: input.kind, link: input.link ?? null },
+    }).catch(() => {});
   } catch (e) {
     console.error("[task-activity] notify failed", {
       kind: input.kind,

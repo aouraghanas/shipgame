@@ -16,6 +16,7 @@ import {
   type SupportTicketRecipient,
   UserNotificationKind,
 } from "@prisma/client";
+import { sendPushToUsers } from "@/lib/push";
 
 export type NotifyInput = {
   userId: string;
@@ -26,7 +27,7 @@ export type NotifyInput = {
   ticketId?: string | null;
 };
 
-/** Create a single notification. */
+/** Create a single notification + best-effort push. */
 export async function notify(input: NotifyInput): Promise<void> {
   if (!input.userId) return;
   await prisma.userNotification.create({
@@ -39,9 +40,15 @@ export async function notify(input: NotifyInput): Promise<void> {
       ticketId: input.ticketId ?? null,
     },
   });
+  // Mirror to a push notification on the user's mobile device(s).
+  void sendPushToUsers([input.userId], {
+    title: input.title,
+    body: input.body,
+    data: { kind: input.kind, link: input.link ?? null },
+  }).catch(() => {});
 }
 
-/** Bulk-create notifications, one row per recipient. Dedupes & ignores empty list. */
+/** Bulk-create notifications, one row per recipient + best-effort push. */
 export async function notifyMany(
   userIds: string[],
   base: Omit<NotifyInput, "userId">
@@ -58,6 +65,11 @@ export async function notifyMany(
       ticketId: base.ticketId ?? null,
     })),
   });
+  void sendPushToUsers(ids, {
+    title: base.title,
+    body: base.body,
+    data: { kind: base.kind, link: base.link ?? null },
+  }).catch(() => {});
 }
 
 /** All admin user IDs (active only). Used for ALL_ADMINS recipient. */

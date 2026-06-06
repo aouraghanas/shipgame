@@ -33,6 +33,11 @@ const en: Dict = {
   "tabs.tickets": "Tickets",
   "tabs.leaderboard": "Leaderboard",
   "tabs.profile": "Profile",
+  "tabs.notifications": "Alerts",
+
+  "notif.title": "Notifications",
+  "notif.markAllRead": "Mark all read",
+  "notif.empty": "You're all caught up.",
 
   "login.title": "Sign in to Shipeh",
   "login.subtitle": "Use your work email and password.",
@@ -129,6 +134,11 @@ const ar: Dict = {
   "tabs.tickets": "التذاكر",
   "tabs.leaderboard": "المتصدرون",
   "tabs.profile": "الملف",
+  "tabs.notifications": "التنبيهات",
+
+  "notif.title": "الإشعارات",
+  "notif.markAllRead": "تحديد الكل كمقروء",
+  "notif.empty": "لا يوجد جديد.",
 
   "login.title": "تسجيل الدخول إلى Shipeh",
   "login.subtitle": "استخدم بريد العمل وكلمة المرور.",

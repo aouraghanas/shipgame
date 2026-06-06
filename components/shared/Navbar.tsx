@@ -12,6 +12,7 @@ import {
   Gift,
   BarChart2,
   Bell,
+  BellRing,
   TrendingUp,
   LogOut,
   Ship,
@@ -41,6 +42,7 @@ const ADMIN_LINKS: NavLink[] = [
   { href: "/admin/feedback", icon: MessageSquareMore, labelKey: "nav.recommendations" },
   { href: "/leaderboard", icon: Trophy, labelKey: "nav.leaderboard" },
   { href: "/admin/notifications", icon: Bell, labelKey: "nav.notifications" },
+  { href: "/admin/app-notifications", icon: BellRing, labelKey: "nav.appNotifications" },
 ];
 
 const ACCOUNTANT_LINKS: NavLink[] = [

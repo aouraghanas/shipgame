@@ -10,6 +10,7 @@ import {
 import { resolveRewardTexts, resolvePunishmentTexts } from "@/lib/month-rewards";
 import { getCurrentMonthKey } from "@/lib/utils";
 import { getSessionFromRequest } from "@/lib/mobile-auth";
+import { reconcileLeaderboardRanks } from "@/lib/leaderboard-rank-alerts";
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
@@ -52,6 +53,14 @@ export async function GET(req: NextRequest) {
 
   const ranked = rankConfirmationAgents(agents);
   const entries = ranked.map((m, i) => ({ rank: i + 1, ...m }));
+
+  if (monthKey === getCurrentMonthKey()) {
+    void reconcileLeaderboardRanks(
+      "confirmation",
+      monthKey,
+      entries.map((e) => ({ userId: e.userId, rank: e.rank }))
+    );
+  }
 
   // Confirmation rewards/punishments use their own conf* text fields, but fall
   // back to the shared resolver shape so the leaderboard UI can reuse the logic.
