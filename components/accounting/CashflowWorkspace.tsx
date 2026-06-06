@@ -1097,32 +1097,19 @@ function FieldCurrency({
   label?: string;
 }) {
   const t = useT();
-  if (isLibyaOnly) {
-    // The Libyan-accountant role is locked to LYD. We render a visible read-only
-    // display PLUS a hidden input that actually carries the value into FormData.
-    // Using `disabled` on the visible input would silently exclude it from the
-    // form submission, so the server would receive no `currency` field and
-    // reject the operation with a "currency required" / "must be LYD" error.
-    return (
-      <div className="space-y-1">
-        <Label className="text-xs">{label ?? t("cash.field.currency")}</Label>
-        <input type="hidden" name={name} value="LYD" />
-        <div
-          className="flex h-10 w-full items-center rounded-md border border-zinc-800 bg-zinc-900/60 px-3 text-sm text-zinc-300"
-          aria-readonly="true"
-        >
-          LYD
-        </div>
-      </div>
-    );
-  }
+  // Libyan accountant primarily works in LYD but also pays some sourcing/fees
+  // in USD, so they can pick between LYD and USD (defaulting to LYD). Other
+  // roles get the full set of currencies.
+  const options = isLibyaOnly
+    ? (["LYD", "USD"] as const)
+    : (["MAD", "USD", "LYD"] as const);
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label ?? t("cash.field.currency")}</Label>
-      <Select name={name} defaultValue="USD">
+      <Select name={name} defaultValue={isLibyaOnly ? "LYD" : "USD"}>
         <SelectTrigger><SelectValue /></SelectTrigger>
         <SelectContent>
-          {(["MAD", "USD", "LYD"] as const).map((c) => (
+          {options.map((c) => (
             <SelectItem key={c} value={c}>
               {c}
             </SelectItem>

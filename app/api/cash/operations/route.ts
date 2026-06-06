@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   canAccessAccounting,
-  currencyScopeFor,
+  allowedEntryCurrenciesFor,
+  visibleOperationCurrenciesFor,
 } from "@/lib/accounting-access";
 import { logAudit } from "@/lib/audit";
 import {
@@ -49,7 +50,9 @@ export async function GET(req: NextRequest) {
   const paginated = sp.get("paginated") === "1" || !!sp.get("page");
   const page = Math.max(1, Number(sp.get("page") || "1"));
   const pageSize = Math.min(200, Math.max(1, Number(sp.get("pageSize") || "50")));
-  const scope = currencyScopeFor(session);
+  // Which operation currencies this user may see in the list (LYD+USD for the
+  // Libyan accountant, all for others).
+  const visibleCurrencies = visibleOperationCurrenciesFor(session);
 
   const where: Prisma.CashOperationWhereInput = {};
   if (typeParam && (ALL_TYPES as readonly string[]).includes(typeParam)) {
@@ -79,15 +82,21 @@ export async function GET(req: NextRequest) {
       }
     : null;
 
-  if (scope) {
-    // Libyan accountant: only show ops whose primary OR destination currency is LYD.
-    const scopeWhere: Prisma.CashOperationWhereInput = {
-      OR: [{ currency: scope }, { destCurrency: scope }],
-    };
-    where.AND = keywordWhere ? [scopeWhere, keywordWhere] : [scopeWhere];
-  } else if (keywordWhere) {
-    where.AND = [keywordWhere];
-  }
+  // Currency scope: the Libyan accountant only sees ops whose primary OR
+  // destination currency is one of their visible currencies (LYD + USD).
+  const scopeWhere: Prisma.CashOperationWhereInput | null = visibleCurrencies
+    ? {
+        OR: [
+          { currency: { in: visibleCurrencies } },
+          { destCurrency: { in: visibleCurrencies } },
+        ],
+      }
+    : null;
+
+  const andParts = [scopeWhere, keywordWhere].filter(
+    (p): p is Prisma.CashOperationWhereInput => p !== null
+  );
+  if (andParts.length) where.AND = andParts;
 
   if (paginated) {
     const [rows, total] = await Promise.all([
@@ -166,14 +175,15 @@ export async function POST(req: NextRequest) {
 
   const row = buildOperationRow(parsed.data);
 
-  // Libyan accountant: every currency involved must be LYD.
-  const scope = currencyScopeFor(session);
-  if (scope) {
+  // Libyan accountant: every currency involved must be within their allowed
+  // entry set (LYD + USD). Other roles have no restriction.
+  const allowedEntry = allowedEntryCurrenciesFor(session);
+  if (allowedEntry) {
     const touched: AccountingCurrency[] = [row.currency];
     if (row.destCurrency) touched.push(row.destCurrency);
-    if (touched.some((c) => c !== scope)) {
+    if (touched.some((c) => !allowedEntry.includes(c))) {
       return NextResponse.json(
-        { error: `You can only record operations in ${scope}.` },
+        { error: `You can only record operations in ${allowedEntry.join(" or ")}.` },
         { status: 403 }
       );
     }
