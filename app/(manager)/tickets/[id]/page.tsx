@@ -27,6 +27,7 @@ type TicketDetail = {
   priority: string;
   status: string;
   recipient: string;
+  createdAt: string;
   deadlineAt: string | null;
   resolutionNote: string | null;
   sellerNameText: string | null;
@@ -166,6 +167,9 @@ export default function TicketDetailPage() {
           <p className="text-sm text-zinc-500">
             {TICKET_SUBJECTS.find((s) => s.value === ticket.subject)?.label} ·{" "}
             {TICKET_RECIPIENTS.find((r) => r.value === ticket.recipient)?.label} · Opened by {ticket.createdBy.name}
+          </p>
+          <p className="text-xs text-zinc-500">
+            Created {new Date(ticket.createdAt).toLocaleString()}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
