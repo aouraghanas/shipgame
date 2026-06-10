@@ -100,6 +100,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Optional permission layer (additive — null means "behave exactly as the
+  // base role"). customRoleId points at a reusable named permission template;
+  // permissionOverrides is { grant: string[]; deny: string[] } of capability keys.
+  customRoleId        String?
+  customRole          CustomRole? @relation("UserCustomRole", fields: [customRoleId], references: [id], onDelete: SetNull)
+  permissionOverrides Json?
+
   deliveredEntries   DeliveredEntry[]
   stockEntries       StockEntry[]
   notes              Note[]
@@ -129,6 +136,20 @@ model User {
   taskComments            TaskComment[]            @relation("TaskCommentAuthor")
   taskActivities          TaskActivity[]           @relation("TaskActivityActor")
   taskChecklistChanges    TaskChecklistItem[]      @relation("TaskChecklistDoneBy")
+}
+
+// ——— Custom permission roles (reusable capability templates) ———
+
+model CustomRole {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  // Array of capability keys (e.g. ["tickets.view","accounting.view"]).
+  capabilities String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]   @relation("UserCustomRole")
 }
 
 // ——— Shipeh accounting (manual entry MVP; API sync later) ———

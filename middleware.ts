@@ -1,6 +1,19 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { CATALOG } from "@/lib/permissions/catalog";
+
+/**
+ * Feature route prefixes → their `view` capability. Used to enforce per-user
+ * page access for users whose permissions have been customized. Built once
+ * from the catalog. Longest prefixes first so e.g. /confirmation-leaderboard
+ * doesn't match /confirmation.
+ */
+const FEATURE_VIEW_GATES: { prefix: string; cap: string }[] = CATALOG.filter(
+  (f) => f.routePrefix
+)
+  .map((f) => ({ prefix: f.routePrefix as string, cap: `${f.key}.view` }))
+  .sort((a, b) => b.prefix.length - a.prefix.length);
 
 /** Sourcing agents: tickets + tasks + recommendations + read-only activity intel + profile only (no leaderboard). */
 const SOURCING_PAGE_PREFIXES = ["/tickets", "/tasks", "/feedback", "/ops-reports", "/profile"];
@@ -41,6 +54,26 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  // Additive per-user permission gate: only for users whose permissions have
+  // been explicitly customized (custom role or overrides). Un-customized users
+  // and admins fall through to the existing role logic unchanged.
+  const caps = token?.caps as string[] | undefined;
+  const customized = token?.customized === true;
+  if (token && customized && caps && !caps.includes("*")) {
+    const gate = FEATURE_VIEW_GATES.find(
+      (g) => pathname === g.prefix || pathname.startsWith(`${g.prefix}/`)
+    );
+    if (gate && !caps.includes(gate.cap)) {
+      // Send them to the first feature they CAN view, else profile.
+      const firstAllowed = FEATURE_VIEW_GATES.find((g) => caps.includes(g.cap));
+      const dest = firstAllowed?.prefix ?? "/profile";
+      if (pathname !== dest) {
+        return NextResponse.redirect(new URL(dest, req.url));
+      }
+    }
+  }
+
   if (token?.role === "SOURCING_AGENT") {
     const allowed = SOURCING_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!allowed) {

@@ -5,6 +5,15 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
+import { isValidCapability } from "@/lib/permissions/catalog";
+import { resolveUserCapabilities } from "@/lib/permissions/resolve";
+
+const overridesSchema = z
+  .object({
+    grant: z.array(z.string()).default([]),
+    deny: z.array(z.string()).default([]),
+  })
+  .nullable();
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -25,6 +34,8 @@ const updateSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   password: z.string().min(6).optional(),
   avatarUrl: z.string().nullable().optional(),
+  customRoleId: z.string().nullable().optional(),
+  permissionOverrides: overridesSchema.optional(),
 });
 
 export async function GET(
@@ -44,11 +55,30 @@ export async function GET(
     select: {
       id: true, email: true, name: true, role: true,
       status: true, avatarUrl: true, createdAt: true,
+      customRoleId: true, permissionOverrides: true,
+      customRole: { select: { capabilities: true } },
     },
   });
 
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(user);
+
+  // Include the resolved effective capabilities so the admin editor can show
+  // the current state (and the client can gate UI). Only admins see the
+  // permission detail; self-views get the basic fields.
+  const effective = Array.from(
+    resolveUserCapabilities({
+      role: user.role,
+      customRoleCapabilities: user.customRole?.capabilities ?? null,
+      overrides: user.permissionOverrides,
+    })
+  );
+
+  const { customRole, ...rest } = user;
+  return NextResponse.json({
+    ...rest,
+    customRoleCapabilities: customRole?.capabilities ?? [],
+    effectiveCapabilities: effective,
+  });
 }
 
 export async function PUT(
@@ -96,8 +126,24 @@ export async function PUT(
     return NextResponse.json({ id: user.id, name: user.name, avatarUrl: user.avatarUrl });
   }
 
-  const data: Record<string, unknown> = { ...rest };
+  const { customRoleId, permissionOverrides, ...plain } = rest;
+  const data: Record<string, unknown> = { ...plain };
   if (password) data.passwordHash = await bcrypt.hash(password, 12);
+
+  // customRoleId: null clears it, a string sets it (validated by FK).
+  if (customRoleId !== undefined) data.customRoleId = customRoleId;
+
+  // permissionOverrides: sanitize to valid capability keys only; null clears.
+  if (permissionOverrides !== undefined) {
+    if (permissionOverrides === null) {
+      data.permissionOverrides = null;
+    } else {
+      data.permissionOverrides = {
+        grant: permissionOverrides.grant.filter(isValidCapability),
+        deny: permissionOverrides.deny.filter(isValidCapability),
+      };
+    }
+  }
 
   const user = await prisma.user.update({
     where: { id: params.id },

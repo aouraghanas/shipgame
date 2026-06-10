@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { getCurrentMonthKey } from "@/lib/utils";
+import { PermissionEditor } from "@/components/admin/PermissionEditor";
+import { baselineCapabilities, diffOverrides } from "@/lib/permissions/resolve";
 
-type User = { id: string; name: string; email: string; role: string; status: string; avatarUrl: string | null };
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  avatarUrl: string | null;
+  customRoleId: string | null;
+  customRoleCapabilities: string[];
+  effectiveCapabilities: string[];
+};
+
+type CustomRole = { id: string; name: string; description: string | null; capabilities: string[]; userCount: number };
 
 export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,27 +40,77 @@ export default function EditUserPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    fetch(`/api/users/${id}`).then((r) => r.json()).then((u) => {
+  // Permission layer state
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [customRoleId, setCustomRoleId] = useState<string>(""); // "" = none
+  const [effective, setEffective] = useState<Set<string>>(new Set());
+
+  const load = useCallback(() => {
+    fetch(`/api/users/${id}`).then((r) => r.json()).then((u: User) => {
       setUser(u);
       setForm({ name: u.name, email: u.email, role: u.role, status: u.status, password: "" });
+      setCustomRoleId(u.customRoleId ?? "");
+      setEffective(new Set(u.effectiveCapabilities ?? []));
     });
-    // Load existing note
+  }, [id]);
+
+  useEffect(() => {
+    load();
+    fetch("/api/admin/custom-roles").then((r) => (r.ok ? r.json() : [])).then(setCustomRoles);
     const month = getCurrentMonthKey();
     fetch(`/api/notes?month=${month}`).then((r) => r.json()).then((notes: { userId: string; content: string; visible: boolean }[]) => {
       const note = notes.find((n) => n.userId === id);
       if (note) { setNoteContent(note.content); setNoteVisible(note.visible); }
     });
-  }, [id]);
+  }, [id, load]);
 
-  async function saveUser(e: React.FormEvent) {
-    e.preventDefault();
+  const isAdminRole = form.role === "ADMIN";
+
+  // Baseline = role defaults ∪ selected custom role caps.
+  const baseline = useMemo(() => {
+    const cr = customRoles.find((r) => r.id === customRoleId);
+    return baselineCapabilities(form.role, cr?.capabilities ?? null);
+  }, [form.role, customRoleId, customRoles]);
+
+  // When the base role or custom role changes, re-seed the effective set to
+  // the new baseline (admin can then tweak). Skip on first load (handled above).
+  const reseedToBaseline = useCallback(() => {
+    setEffective(new Set(baseline));
+  }, [baseline]);
+
+  async function saveUser(e?: React.FormEvent) {
+    e?.preventDefault();
     setSaving(true); setError(""); setSuccess("");
-    const body: Record<string, unknown> = { name: form.name, email: form.email, role: form.role, status: form.status };
+    const body: Record<string, unknown> = {
+      name: form.name,
+      email: form.email,
+      role: form.role,
+      status: form.status,
+      customRoleId: customRoleId || null,
+    };
     if (form.password) body.password = form.password;
 
-    const res = await fetch(`/api/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!res.ok) { setError("Failed to save"); } else { setSuccess("Saved!"); }
+    // ADMIN always has everything → never store overrides for admins.
+    if (isAdminRole) {
+      body.permissionOverrides = null;
+    } else {
+      const overrides = diffOverrides(effective, baseline);
+      body.permissionOverrides =
+        overrides.grant.length === 0 && overrides.deny.length === 0 ? null : overrides;
+    }
+
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(typeof j.error === "string" ? j.error : "Failed to save");
+    } else {
+      setSuccess("Saved!");
+      load();
+    }
     setSaving(false);
   }
 
@@ -61,8 +125,11 @@ export default function EditUserPage() {
   if (!user) return <div className="flex justify-center py-20"><div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="max-w-lg space-y-6">
-      <Link href="/admin/users"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" /> Back</Button></Link>
+    <div className="max-w-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <Link href="/admin/users"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" /> Back</Button></Link>
+        <Link href="/admin/custom-roles"><Button variant="outline" size="sm" className="gap-2"><ShieldCheck className="h-4 w-4" /> Manage custom roles</Button></Link>
+      </div>
 
       <Card>
         <CardHeader><CardTitle>Edit User — {user.name}</CardTitle></CardHeader>
@@ -74,7 +141,10 @@ export default function EditUserPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
+                <Select
+                  value={form.role}
+                  onValueChange={(v) => { setForm({ ...form, role: v }); setTimeout(reseedToBaseline, 0); }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MANAGER">Manager</SelectItem>
@@ -104,6 +174,58 @@ export default function EditUserPage() {
             {success && <p className="text-sm text-emerald-400">{success}</p>}
             <Button type="submit" disabled={saving} className="w-full">{saving ? "Saving..." : "Save Changes"}</Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-brand" /> Permissions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isAdminRole ? (
+            <p className="text-sm text-zinc-500">
+              Admins always have full access to every page and action — permissions can’t be limited for this role.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label>Custom role template (optional)</Label>
+                <Select
+                  value={customRoleId || "none"}
+                  onValueChange={(v) => {
+                    const next = v === "none" ? "" : v;
+                    setCustomRoleId(next);
+                    // Re-seed effective to the new baseline so the editor reflects the template.
+                    const cr = customRoles.find((r) => r.id === next);
+                    setEffective(baselineCapabilities(form.role, cr?.capabilities ?? null));
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="No custom role" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No custom role (use base role)</SelectItem>
+                    {customRoles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-zinc-500">
+                  Pick a saved template to start from, then fine-tune the toggles below for this user.
+                </p>
+              </div>
+
+              <PermissionEditor
+                value={effective}
+                baseline={baseline}
+                onChange={setEffective}
+              />
+
+              <Button type="button" onClick={() => saveUser()} disabled={saving} className="w-full">
+                {saving ? "Saving..." : "Save permissions"}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 

@@ -57,6 +57,10 @@ declare module "next-auth" {
       name: string;
       role: string;
       avatarUrl: string | null;
+      /** Effective capability keys, or ["*"] for admins. null = legacy session. */
+      capabilities?: string[] | null;
+      /** True if this user has an explicit custom role / overrides. */
+      customized?: boolean;
     };
   }
 }
@@ -66,5 +70,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     avatarUrl: string | null;
+    caps?: string[];
+    customized?: boolean;
   }
 }

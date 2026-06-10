@@ -13,6 +13,7 @@ import {
   BarChart2,
   Bell,
   BellRing,
+  ShieldCheck,
   TrendingUp,
   LogOut,
   Ship,
@@ -26,6 +27,7 @@ import { ThemeSwitch } from "./ThemeSwitch";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { NotificationsBell } from "./NotificationsBell";
 import { useT } from "./I18nProvider";
+import { viewCapForHref } from "@/lib/permissions/catalog";
 
 type NavLink = { href: string; icon: LucideIcon; labelKey: string };
 
@@ -34,6 +36,7 @@ const ADMIN_LINKS: NavLink[] = [
   { href: "/tickets", icon: Ticket, labelKey: "nav.tickets" },
   { href: "/tasks", icon: Kanban, labelKey: "nav.tasks" },
   { href: "/admin/users", icon: Users, labelKey: "nav.users" },
+  { href: "/admin/custom-roles", icon: ShieldCheck, labelKey: "nav.customRoles" },
   { href: "/admin/rewards", icon: Gift, labelKey: "nav.rewards" },
   { href: "/admin/activity", icon: Activity, labelKey: "nav.activity" },
   { href: "/admin/reports", icon: BarChart2, labelKey: "nav.reports" },
@@ -93,7 +96,7 @@ export function Navbar() {
   const role = session?.user?.role;
   const t = useT();
 
-  const links =
+  const baseLinks =
     role === "ADMIN"
       ? ADMIN_LINKS
       : role === "ACCOUNTANT"
@@ -107,6 +110,32 @@ export function Navbar() {
               : role === "CONFIRMATION_AGENT"
                 ? CONFIRMATION_LINKS
                 : MANAGER_LINKS;
+
+  // For users with explicitly customized permissions, hide page links they
+  // can no longer view (and the permission layer may grant extra ones).
+  const caps = session?.user?.capabilities ?? null;
+  const customized = session?.user?.customized === true;
+  const links =
+    customized && caps && !caps.includes("*")
+      ? (() => {
+          // start from the union of every nav link so grants can surface pages
+          // not in the base-role array, then keep only viewable ones.
+          const all = [
+            ...MANAGER_LINKS,
+            ...ACCOUNTANT_LINKS,
+            ...SOURCING_LINKS,
+            ...CONFIRMATION_LINKS,
+            { href: "/profile", icon: User, labelKey: "nav.profile" },
+          ];
+          const seen = new Set<string>();
+          return all.filter((l) => {
+            if (seen.has(l.href)) return false;
+            seen.add(l.href);
+            const cap = viewCapForHref(l.href);
+            return cap === null ? true : caps.includes(cap);
+          });
+        })()
+      : baseLinks;
 
   const homeHref =
     role === "ADMIN"
