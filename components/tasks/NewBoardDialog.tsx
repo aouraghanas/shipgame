@@ -40,22 +40,39 @@ const COLOR_CHOICES = [
 
 type Visibility = "PUBLIC" | "TEAM_ONLY" | "PRIVATE";
 
+/** Minimal board shape needed to prefill the form in edit mode. */
+export type EditableBoard = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  visibility: Visibility;
+  members: UserLite[];
+};
+
 export function NewBoardDialog({
   users,
+  board,
   onClose,
   onCreated,
 }: {
   users: UserLite[];
+  /** When provided, the dialog edits this board (PATCH) instead of creating. */
+  board?: EditableBoard;
   onClose: () => void;
   onCreated: () => void;
 }) {
   const t = useT();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState<string>("📋");
-  const [color, setColor] = useState<string>(COLOR_CHOICES[0]);
-  const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
-  const [memberIds, setMemberIds] = useState<string[]>([]);
+  const isEdit = Boolean(board);
+  const [name, setName] = useState(board?.name ?? "");
+  const [description, setDescription] = useState(board?.description ?? "");
+  const [icon, setIcon] = useState<string>(board?.icon ?? "📋");
+  const [color, setColor] = useState<string>(board?.color ?? COLOR_CHOICES[0]);
+  const [visibility, setVisibility] = useState<Visibility>(board?.visibility ?? "PUBLIC");
+  const [memberIds, setMemberIds] = useState<string[]>(
+    board?.members?.map((m) => m.id) ?? []
+  );
   const [userSearch, setUserSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,20 +99,25 @@ export function NewBoardDialog({
     setSaving(true);
     setError(null);
     try {
-      const r = await fetch("/api/tasks/boards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          icon: icon || undefined,
-          color,
-          visibility,
-          // Only forward member ids when access is restricted. PUBLIC
-          // boards don't need an explicit member list.
-          memberIds: visibility === "PUBLIC" ? undefined : memberIds,
-        }),
-      });
+      const payload = {
+        name: name.trim(),
+        // On edit, send null to clear; on create, omit when empty.
+        description: isEdit ? (description.trim() || null) : description.trim() || undefined,
+        icon: icon || (isEdit ? null : undefined),
+        color,
+        visibility,
+        // Only forward member ids when access is restricted. PUBLIC
+        // boards don't need an explicit member list.
+        memberIds: visibility === "PUBLIC" ? (isEdit ? [] : undefined) : memberIds,
+      };
+      const r = await fetch(
+        isEdit ? `/api/tasks/boards/${board!.id}` : "/api/tasks/boards",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       if (r.ok) {
         onCreated();
       } else {
@@ -113,7 +135,7 @@ export function NewBoardDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("tasks.newBoard")}</DialogTitle>
+          <DialogTitle>{isEdit ? t("tasks.editBoard") : t("tasks.newBoard")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
@@ -358,7 +380,7 @@ export function NewBoardDialog({
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={saving || !name.trim()}>
-              {saving ? t("common.saving") : t("tasks.board.create")}
+              {saving ? t("common.saving") : isEdit ? t("common.save") : t("tasks.board.create")}
             </Button>
           </div>
         </form>

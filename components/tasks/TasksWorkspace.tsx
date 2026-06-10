@@ -44,6 +44,7 @@ import {
   ArchiveRestore,
   ChevronDown,
   ChevronRight,
+  Pencil,
   Plus,
   Search,
   X,
@@ -106,6 +107,7 @@ export function TasksWorkspace() {
 
   // New board dialog (admin only)
   const [showNewBoard, setShowNewBoard] = useState(false);
+  const [showEditBoard, setShowEditBoard] = useState(false);
 
   // Archived boards panel — collapsed by default, admin-only feature.
   const [archivedBoards, setArchivedBoards] = useState<BoardListItem[]>([]);
@@ -427,6 +429,19 @@ export function TasksWorkspace() {
               <Plus className="h-3.5 w-3.5 mr-1" />
               {t("tasks.newBoard")}
             </Button>
+            {activeBoardId && board && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEditBoard(true)}
+                title={t("tasks.editBoard")}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                {t("tasks.editBoard")}
+              </Button>
+            )}
             {activeBoardId && (
               <Button
                 type="button"
@@ -665,6 +680,28 @@ export function TasksWorkspace() {
           onCreated={() => {
             setShowNewBoard(false);
             void loadBoards();
+          }}
+        />
+      )}
+
+      {/* Edit board dialog (admin) */}
+      {showEditBoard && board && (
+        <NewBoardDialog
+          users={users}
+          board={{
+            id: board.id,
+            name: board.name,
+            description: board.description,
+            icon: board.icon,
+            color: board.color,
+            visibility: board.visibility,
+            members: board.members,
+          }}
+          onClose={() => setShowEditBoard(false)}
+          onCreated={() => {
+            setShowEditBoard(false);
+            void loadBoards();
+            if (activeBoardId) void loadBoard(activeBoardId);
           }}
         />
       )}

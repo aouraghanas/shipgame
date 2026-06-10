@@ -279,6 +279,7 @@ const en: Dict = {
 
   // tasks (kanban)
   "tasks.newBoard": "New board",
+  "tasks.editBoard": "Edit board",
   "tasks.newBoard.prompt": "Board name",
   "tasks.archiveBoard": "Archive board",
   "tasks.restoreBoard": "Restore",
@@ -625,6 +626,7 @@ const ar: Dict = {
 
   // tasks (kanban)
   "tasks.newBoard": "لوحة جديدة",
+  "tasks.editBoard": "تعديل اللوحة",
   "tasks.newBoard.prompt": "اسم اللوحة",
   "tasks.archiveBoard": "أرشفة اللوحة",
   "tasks.restoreBoard": "استعادة",
